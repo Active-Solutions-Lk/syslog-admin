@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,9 +7,87 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Example model, replace with your actual models
-// model User {
-//   id    Int     @id @default(autoincrement())
-//   email String  @unique
-//   name  String?
-// }
+model admins {
+  id           Int        @id @default(autoincrement())
+  name         String?
+  email        String     @unique(map: "User_email_key")
+  passwordHash String?
+  role         String?    @db.VarChar(50)
+  status       Float
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime
+  projects     projects[]
+
+  @@index([id], map: "id")
+}
+
+model packages {
+  id           Int        @id @default(autoincrement())
+  name         String     @db.VarChar(50)
+  log_count    Int
+  duration     Float      @db.Float
+  device_count Int
+  log_analyce  Int        @db.TinyInt
+  created_at   DateTime   @default(now()) @db.Timestamp(0)
+  updated_at   DateTime   @default(now()) @db.Timestamp(0)
+  projects     projects[]
+}
+
+model ports {
+  id         Int      @id @default(autoincrement())
+  port       Int
+  project_id Int
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+  projects   projects @relation(fields: [project_id], references: [id], onDelete: Cascade, map: "fk_project_id_with_project_id")
+
+  @@index([project_id], map: "fk_project_id_with_project_id")
+}
+
+model projects {
+  id             Int       @id @default(autoincrement())
+  activation_key String    @db.Text
+  collector_ip   String    @db.VarChar(50)
+  loggert_ip     String    @db.VarChar(50)
+  pkg_id         Int
+  admin_id       Int?
+  reseller_id    Int?
+  created_at     DateTime  @default(now()) @db.Timestamp(0)
+  updated_at     DateTime  @default(now()) @db.Timestamp(0)
+  ports          ports[]
+  admins         admins?   @relation(fields: [admin_id], references: [id], onDelete: Cascade, map: "fk_admin_id_admins_id")
+  packages       packages  @relation(fields: [pkg_id], references: [id], onDelete: Cascade, map: "fk_pkgid_package")
+  reseller       reseller? @relation(fields: [reseller_id], references: [customer_id], onDelete: Cascade, map: "fk_reseller_id_with_reseller_id")
+
+  @@index([admin_id], map: "fk_admin_id_admins_id")
+  @@index([reseller_id], map: "fk_reseller_id_with_reseller_id")
+  @@index([pkg_id], map: "pkg_id")
+}
+
+model reseller {
+  customer_id   Int        @id @default(autoincrement())
+  company_name  String     @unique(map: "company_name") @db.VarChar(100)
+  address       String?    @db.VarChar(250)
+  type          String     @db.VarChar(100)
+  credit_limit  String?    @db.VarChar(100)
+  payment_terms String?    @db.VarChar(100)
+  note          String?    @db.VarChar(250)
+  vat           String?    @db.VarChar(11)
+  city          Int?
+  created_at    DateTime   @default(now()) @db.Timestamp(0)
+  updated_at    DateTime   @default(now()) @db.Timestamp(0)
+  projects      projects[]
+
+  @@index([city], map: "city")
+}
+
+model session {
+  id           String   @id
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+  expires      DateTime
+  sessionToken String   @unique(map: "Session_sessionToken_key")
+
+  @@index([userId], map: "Session_userId_fkey")
+}

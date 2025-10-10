@@ -12,6 +12,13 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
+  Users,
+  Package,
+  Plug,
+  FolderOpen,
+  Building,
+  Key,
+  LayoutDashboard
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -26,93 +33,100 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-// This is sample data.
+// Updated data based on Prisma schema models
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "Admin",
+    email: "admin@example.com",
+    avatar: "/avatars/admin.jpg",
   },
   teams: [
     {
-      name: "Acme Inc",
+      name: "Syslog Admin",
       logo: GalleryVerticalEnd,
       plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
     },
   ],
   navMain: [
     {
-      title: "Playground",
+      title: "Admin Management",
       url: "#",
-      icon: SquareTerminal,
-      isActive: true,
+      icon: Users,
       items: [
         {
-          title: "History",
-          url: "#",
+          title: "Admins",
+          url: "/dashboard/admins",
         },
         {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
+          title: "Sessions",
+          url: "/dashboard/sessions",
         },
       ],
     },
     {
-      title: "Models",
+      title: "Packages",
       url: "#",
-      icon: Bot,
+      icon: Package,
       items: [
         {
-          title: "Genesis",
-          url: "#",
+          title: "Package List",
+          url: "/dashboard/packages",
         },
         {
-          title: "Explorer",
-          url: "#",
-        },
-        {
-          title: "Quantum",
-          url: "#",
+          title: "Ports",
+          url: "/dashboard/ports",
         },
       ],
     },
     {
-      title: "Documentation",
+      title: "Projects",
       url: "#",
-      icon: BookOpen,
+      icon: FolderOpen,
       items: [
         {
-          title: "Introduction",
-          url: "#",
+          title: "Project List",
+          url: "/dashboard/projects",
         },
         {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
+          title: "Activation Keys",
+          url: "/dashboard/activation-keys",
         },
       ],
     },
+    {
+      title: "Resellers",
+      url: "#",
+      icon: Building,
+      items: [
+        {
+          title: "Reseller List",
+          url: "/dashboard/resellers",
+        },
+        {
+          title: "Companies",
+          url: "/dashboard/companies",
+        },
+      ],
+    },
+    // {
+    //   title: "Documentation",
+    //   url: "#",
+    //   icon: BookOpen,
+    //   items: [
+    //     {
+    //       title: "API Reference",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "User Guides",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Tutorials",
+    //       url: "#",
+    //     },
+    //   ],
+    // },
     {
       title: "Settings",
       url: "#",
@@ -120,39 +134,35 @@ const data = {
       items: [
         {
           title: "General",
-          url: "#",
+          url: "/dashboard/settings",
         },
         {
-          title: "Team",
-          url: "#",
+          title: "Database",
+          url: "/dashboard/database",
         },
         {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
+          title: "Security",
+          url: "/dashboard/security",
         },
       ],
     },
   ],
   projects: [
     {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
+      name: "Dashboard",
+      url: "/dashboard",
+      icon: LayoutDashboard,
+    }
+    // {
+    //   name: "Network Monitoring",
+    //   url: "#",
+    //   icon: PieChart,
+    // },
+    // {
+    //   name: "Device Management",
+    //   url: "#",
+    //   icon: Map,
+    // },
   ],
 }
 
@@ -163,8 +173,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
         <NavProjects projects={data.projects} />
+        <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
