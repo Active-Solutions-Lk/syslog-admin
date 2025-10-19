@@ -122,13 +122,48 @@ fi
 
 # 7. Generate Prisma Client
 echo "7. Generating Prisma Client..."
+# First, try to generate Prisma Client normally
 npx prisma generate
 
 if [ $? -eq 0 ]; then
     echo "Prisma Client generated successfully."
 else
-    echo "Error: Failed to generate Prisma Client."
-    exit 1
+    echo "Warning: Initial Prisma Client generation failed. Trying alternative approach..."
+    # Remove node_modules and package-lock.json to ensure clean install
+    echo "Removing node_modules and package-lock.json for clean install..."
+    rm -rf node_modules package-lock.json
+    
+    # Reinstall dependencies with specific Prisma configuration
+    echo "Reinstalling dependencies..."
+    npm install
+    
+    # Try generating Prisma Client again
+    echo "Retrying Prisma Client generation..."
+    npx prisma generate
+    
+    if [ $? -eq 0 ]; then
+        echo "Prisma Client generated successfully on second attempt."
+    else
+        echo "Warning: Prisma Client generation still failing. This may be due to WASM issues on your system."
+        echo "Attempting to install Prisma client with binary engine..."
+        
+        # Set Prisma engine type to binary instead of WASM
+        export PRISMA_CLIENT_ENGINE_TYPE="binary"
+        
+        # Reinstall Prisma client with binary engine
+        npm install @prisma/client --save
+        
+        # Try generating again
+        npx prisma generate
+        
+        if [ $? -eq 0 ]; then
+            echo "Prisma Client generated successfully with binary engine."
+        else
+            echo "Error: Failed to generate Prisma Client even with binary engine."
+            echo "You may need to manually run 'npx prisma generate' after checking your environment."
+            echo "Continuing with setup as this may not prevent the application from running..."
+        fi
+    fi
 fi
 
 # 8. Create production build

@@ -25,12 +25,19 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 This project includes an automated setup script for Ubuntu Linux environments:
 
 - `setup.sh` - Shell script for full automated setup
+- `fix-prisma.sh` - Script to fix common Prisma issues on Linux
 - `README-SETUP.md` - Detailed instructions for using the setup script
+- `PRISMA-TROUBLESHOOTING.md` - Guide for resolving common Prisma issues on Linux
 
 To run the automated setup:
 
 1. Make the script executable: `chmod +x setup.sh`
 2. Run the script: `./setup.sh`
+
+If you encounter Prisma issues, you can also run:
+
+1. Make the fix script executable: `chmod +x fix-prisma.sh`
+2. Run the fix script: `./fix-prisma.sh`
 
 ## Learn More
 

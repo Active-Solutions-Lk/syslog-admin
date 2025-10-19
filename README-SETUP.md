@@ -37,6 +37,16 @@ The `setup.sh` script automates the following tasks:
    ./setup.sh
    ```
 
+If you encounter Prisma issues after running the setup, you can also use the fix script:
+
+1. Make the fix script executable: `chmod +x fix-prisma.sh`
+2. Run the fix script: `./fix-prisma.sh`
+
+Additional utility scripts are available:
+
+- `test-prisma-connection.js` - Test Prisma connection
+- `test-database-connection.js` - Test raw database connection
+
 ## Manual Configuration Steps
 
 ### MySQL Root Password
@@ -92,6 +102,17 @@ pm2 stop syslog-admin
 
 4. **Prisma Migration Failures**: Ensure the database is accessible and the user has proper permissions.
 
+5. **Prisma Client Generation Failures**: This is a known issue on some Linux systems where the WASM-based query engine doesn't work properly. The setup script now includes fallback mechanisms:
+   - First tries normal generation
+   - If that fails, removes node_modules and reinstalls
+   - If that still fails, tries using the binary engine instead of WASM
+   
+   If you still encounter issues, you can manually set the engine type:
+   ```bash
+   export PRISMA_CLIENT_ENGINE_TYPE="binary"
+   npx prisma generate
+   ```
+
 ### Manual Installation
 
 If the automated script fails, you can follow the manual installation steps:
@@ -102,7 +123,12 @@ If the automated script fails, you can follow the manual installation steps:
 4. Create a MySQL database and user
 5. Create a `.env` file with your database credentials
 6. Run `npx prisma migrate dev` or `npx prisma db push`
-7. Run `npx prisma generate`
+7. Run `npx prisma generate` (if this fails due to WASM issues, try:
+   ```bash
+   export PRISMA_CLIENT_ENGINE_TYPE="binary"
+   npm install @prisma/client --save
+   npx prisma generate
+   ```)
 8. Run `npm run build` to create a production build
 9. Install PM2 globally: `npm install -g pm2`
 10. Configure firewall rules for required ports
