@@ -1,6 +1,6 @@
 "use server";
 
-import bcrypt from 'bcrypt';
+// import bcrypt from 'bcrypt';
 
 export async function Login({ userName, password }) {
   try {
@@ -52,6 +52,7 @@ export async function Login({ userName, password }) {
 
 export async function Register({ data }) {
   // Implementation for registration
+  console.log(data)
   return {
     success: false,
     error: 'Registration not implemented',

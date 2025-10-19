@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -8,7 +8,7 @@ async function main() {
     const projectCount = await prisma.projects.count();
     console.log(`Database connection successful. Found ${projectCount} projects.`);
   } catch (error) {
-    console.error('Database connection failed:', error.message);
+    console.error('Database connection failed:', (error as Error).message);
   } finally {
     await prisma.$disconnect();
   }

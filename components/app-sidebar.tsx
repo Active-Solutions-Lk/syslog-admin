@@ -2,22 +2,17 @@
 
 import * as React from "react"
 import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
+
   GalleryVerticalEnd,
-  Map,
-  PieChart,
+ 
   Settings2,
-  SquareTerminal,
+
   Users,
   Package,
-  Plug,
+
   FolderOpen,
   Building,
-  Key,
+
   LayoutDashboard
 } from "lucide-react"
 

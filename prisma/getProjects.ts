@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -16,7 +16,7 @@ async function main() {
     console.log('Projects in database:');
     console.log(JSON.stringify(projects, null, 2));
   } catch (error) {
-    console.error('Error fetching projects:', error.message);
+    console.error('Error fetching projects:', (error as Error).message);
   } finally {
     await prisma.$disconnect();
   }

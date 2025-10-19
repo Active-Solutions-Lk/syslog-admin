@@ -27,7 +27,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -63,7 +62,9 @@ export function DataTable<TData, TValue>({
   const [contextMenu, setContextMenu] = React.useState<{ 
     x: number; 
     y: number; 
-    row: any | null 
+    row: {
+      original: TData;
+    } | null 
   } | null>(null)
 
   const table = useReactTable({
@@ -85,7 +86,9 @@ export function DataTable<TData, TValue>({
     },
   })
 
-  const handleContextMenu = React.useCallback((e: React.MouseEvent, row: any) => {
+  const handleContextMenu = React.useCallback((e: React.MouseEvent, row: {
+    original: TData;
+  }) => {
     e.preventDefault()
     setContextMenu({ x: e.clientX, y: e.clientY, row })
   }, [])
@@ -94,21 +97,27 @@ export function DataTable<TData, TValue>({
     setContextMenu(null)
   }, [])
 
-  const handleEdit = React.useCallback((item: any) => {
+  const handleEdit = React.useCallback((item: {
+    original: TData;
+  }) => {
     if (onEdit) {
       onEdit(item.original)
     }
     handleMenuClose()
   }, [onEdit, handleMenuClose])
 
-  const handleDelete = React.useCallback((item: any) => {
+  const handleDelete = React.useCallback((item: {
+    original: TData;
+  }) => {
     if (onDelete) {
       onDelete(item.original)
     }
     handleMenuClose()
   }, [onDelete, handleMenuClose])
 
-  const handleAdvancedView = React.useCallback((item: any) => {
+  const handleAdvancedView = React.useCallback((item: {
+    original: TData;
+  }) => {
     if (onAdvancedView) {
       onAdvancedView(item.original)
     }
@@ -243,7 +252,7 @@ export function DataTable<TData, TValue>({
           {(onEdit || onAdd) && (
             <button
               className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden w-full text-left"
-              onClick={() => handleEdit(contextMenu.row)}
+              onClick={() => contextMenu?.row && handleEdit(contextMenu.row)}
             >
               Edit
             </button>
@@ -251,7 +260,7 @@ export function DataTable<TData, TValue>({
           {onDelete && (
             <button
               className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden w-full text-left"
-              onClick={() => handleDelete(contextMenu.row)}
+              onClick={() => contextMenu?.row && handleDelete(contextMenu.row)}
             >
               Delete
             </button>
@@ -259,7 +268,7 @@ export function DataTable<TData, TValue>({
           {onAdvancedView && (
             <button
               className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden w-full text-left"
-              onClick={() => handleAdvancedView(contextMenu.row)}
+              onClick={() => contextMenu?.row && handleAdvancedView(contextMenu.row)}
             >
               Advanced View
             </button>
