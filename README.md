@@ -20,6 +20,18 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Automated Setup
+
+This project includes an automated setup script for Ubuntu Linux environments:
+
+- `setup.sh` - Shell script for full automated setup
+- `README-SETUP.md` - Detailed instructions for using the setup script
+
+To run the automated setup:
+
+1. Make the script executable: `chmod +x setup.sh`
+2. Run the script: `./setup.sh`
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
