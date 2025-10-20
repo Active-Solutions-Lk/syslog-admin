@@ -10,7 +10,7 @@ const testProjectValidation = async () => {
     };
 
     // Make the API request
-    const response = await fetch('http://localhost:3000/api/project_validate', {
+    const response = await fetch('http://localhost:3001/api/project_validate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

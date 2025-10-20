@@ -1,7 +1,7 @@
-// Test script for the project validation API endpoint with invalid secret key
-const testInvalidSecretKey = async () => {
+// Test script for the project validation API endpoint with invalid secret
+const testProjectValidation = async () => {
   try {
-    // Test data with invalid secret key
+    // Test data with invalid secret
     const testData = {
       activationKey: 'AB12-CD34-EF58',
       secretKey: 'invalid-secret-key',
@@ -10,7 +10,7 @@ const testInvalidSecretKey = async () => {
     };
 
     // Make the API request
-    const response = await fetch('http://localhost:3000/api/project_validate', {
+    const response = await fetch('http://localhost:3001/api/project_validate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -19,11 +19,11 @@ const testInvalidSecretKey = async () => {
     });
 
     const result = await response.json();
-    console.log('API Response Status (Invalid Secret Key):', response.status);
+    console.log('API Response Status:', response.status);
     console.log('API Response:', JSON.stringify(result, null, 2));
   } catch (error) {
     console.error('Error testing API endpoint:', error);
   }
 };
 
-testInvalidSecretKey();
+testProjectValidation();

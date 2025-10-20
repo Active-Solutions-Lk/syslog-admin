@@ -3,7 +3,6 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export async function POST(request) {
-
   try {
     // Parse the request body
     const body = await request.json();
@@ -33,13 +32,6 @@ export async function POST(request) {
         ports: true
       }
     });
-
-    // Add these lines at the beginning of the POST function for debugging
-console.log('Debug - PROJECT_VALIDATION_SECRET from env:', process.env.PROJECT_VALIDATION_SECRET);
-console.log('Debug - Expected secret key length:', process.env.PROJECT_VALIDATION_SECRET?.length);
-console.log('Debug - Received secret key:', secretKey);
-console.log('Debug - Received secret key length:', secretKey?.length);
-console.log('Debug - Keys match:', secretKey === process.env.PROJECT_VALIDATION_SECRET);
 
     if (!project) {
       return new Response(
