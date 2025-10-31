@@ -1,5 +1,5 @@
 // Script to check projects in the database
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 

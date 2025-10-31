@@ -48,7 +48,7 @@ model ports {
 
 model projects {
   id             Int       @id @default(autoincrement())
-  activation_key String    @db.Text
+  activation_key String    @unique @db.VarChar(50)
   collector_ip   String    @db.VarChar(50)
   loggert_ip     String    @db.VarChar(50)
   pkg_id         Int

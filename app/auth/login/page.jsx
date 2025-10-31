@@ -3,9 +3,11 @@
 import LoginForm from "@/components/auth/login-form"
 import { Login } from "@/app/actions/auth"
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function Page() {
   const [loginError, setLoginError] = useState(null);
+  const router = useRouter();
 
   const handleLogin = async (data) => {
     try {
@@ -14,8 +16,9 @@ export default function Page() {
       
       if (result.success) {
         console.log("Login successful:", result);
-        // Handle successful login (e.g., redirect to dashboard)
-        // You might want to store session info or redirect the user
+        // Redirect to dashboard after successful login
+        router.push('/dashboard');
+        router.refresh();
         return result;
       } else {
         // Set the error message from the server

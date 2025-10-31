@@ -1,20 +1,5 @@
-"use client"
-
 import * as React from "react"
-import {
-
-  GalleryVerticalEnd,
- 
-  Settings2,
-
-  Users,
-  Package,
-
-  FolderOpen,
-  Building,
-
-  LayoutDashboard
-} from "lucide-react"
+import { getCurrentUserData } from '@/components/auth/user-data';
 
 import { NavMain } from "@/components/nav-main"
 import { NavProjects } from "@/components/nav-projects"
@@ -28,40 +13,20 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-// Updated data based on Prisma schema models
+// Updated data using string identifiers for icons
 const data = {
-  user: {
-    name: "Admin",
-    email: "admin@example.com",
-    avatar: "/avatars/admin.jpg",
-  },
   teams: [
     {
       name: "Syslog Admin",
-      logo: GalleryVerticalEnd,
+      logo: "GalleryVerticalEnd",
       plan: "Enterprise",
     },
   ],
   navMain: [
     {
-      title: "Admin Management",
-      url: "#",
-      icon: Users,
-      items: [
-        {
-          title: "Admins",
-          url: "/dashboard/admins",
-        },
-        {
-          title: "Sessions",
-          url: "/dashboard/sessions",
-        },
-      ],
-    },
-    {
       title: "Packages",
       url: "#",
-      icon: Package,
+      icon: "Package",
       items: [
         {
           title: "Package List",
@@ -76,7 +41,7 @@ const data = {
     {
       title: "Projects",
       url: "#",
-      icon: FolderOpen,
+      icon: "FolderOpen",
       items: [
         {
           title: "Project List",
@@ -91,7 +56,7 @@ const data = {
     {
       title: "Resellers",
       url: "#",
-      icon: Building,
+      icon: "Building",
       items: [
         {
           title: "Reseller List",
@@ -103,41 +68,18 @@ const data = {
         },
       ],
     },
-    // {
-    //   title: "Documentation",
-    //   url: "#",
-    //   icon: BookOpen,
-    //   items: [
-    //     {
-    //       title: "API Reference",
-    //       url: "#",
-    //     },
-    //     {
-    //       title: "User Guides",
-    //       url: "#",
-    //     },
-    //     {
-    //       title: "Tutorials",
-    //       url: "#",
-    //     },
-    //   ],
-    // },
     {
       title: "Settings",
       url: "#",
-      icon: Settings2,
+      icon: "Settings2",
       items: [
         {
           title: "General",
           url: "/dashboard/settings",
         },
-        {
-          title: "Database",
-          url: "/dashboard/database",
-        },
-        {
-          title: "Security",
-          url: "/dashboard/security",
+         {
+          title: "Admins",
+          url: "/dashboard/admins",
         },
       ],
     },
@@ -146,22 +88,15 @@ const data = {
     {
       name: "Dashboard",
       url: "/dashboard",
-      icon: LayoutDashboard,
+      icon: "LayoutDashboard",
     }
-    // {
-    //   name: "Network Monitoring",
-    //   url: "#",
-    //   icon: PieChart,
-    // },
-    // {
-    //   name: "Device Management",
-    //   url: "#",
-    //   icon: Map,
-    // },
   ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  // Fetch user data on the server side
+  const user = await getCurrentUserData();
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -172,7 +107,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

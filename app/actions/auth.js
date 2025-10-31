@@ -1,68 +1,195 @@
 "use server";
 
-// import bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
+import { SignJWT } from 'jose';
+import { cookies } from 'next/headers';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+// Generate JWT secret
+async function getJwtSecret() {
+  const secret = process.env.JWT_SECRET || 'fallback_secret_key';
+  return new TextEncoder().encode(secret);
+}
+
+// Create JWT token
+async function createToken(payload) {
+  const secret = await getJwtSecret();
+  const iat = Math.floor(Date.now() / 1000);
+  const exp = iat + 60 * 60 * 24; // 24 hours
+
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt(iat)
+    .setExpirationTime(exp)
+    .sign(secret);
+}
 
 export async function Login({ userName, password }) {
   try {
-    // Call the API endpoint to validate credentials
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username: userName,
-        password: password,
-      }),
+    // Find admin by email
+    const admin = await prisma.admins.findUnique({
+      where: {
+        email: userName
+      }
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      // For 401 errors (authentication failures), show the specific error message
-      if (response.status === 401) {
-        return {
-          success: false,
-          error: data.error || 'Invalid username or password',
-        };
-      }
-      
-      // For other errors, provide a generic message
+    // If admin not found or password doesn't match
+    if (!admin || !admin.passwordHash) {
       return {
         success: false,
-        error: data.error || 'Login failed. Please try again.',
+        error: 'Invalid username or password',
       };
     }
 
-    // In a real application, you would set a session cookie here
-    // For now, we'll just return the success response
+    // Compare password
+    const isValid = await bcrypt.compare(password, admin.passwordHash);
+    
+    if (!isValid) {
+      return {
+        success: false,
+        error: 'Invalid username or password',
+      };
+    }
+
+    // Create session token
+    const token = await createToken({
+      id: admin.id,
+      email: admin.email,
+      role: admin.role
+    });
+
+    // Set cookie (await cookies() first)
+    const cookieStore = await cookies();
+    cookieStore.set('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: '/',
+      sameSite: 'strict',
+    });
+
+    // Create session in database
+    const sessionId = `session_${admin.id}_${Date.now()}`;
+    const now = new Date();
+    await prisma.session.create({
+      data: {
+        id: sessionId,
+        userId: admin.id.toString(),
+        sessionToken: token,
+        expires: new Date(Date.now() + 60 * 60 * 24 * 1000), // 24 hours
+        createdAt: now,
+        updatedAt: now, // Add the required updatedAt field
+      }
+    });
+
     return {
       success: true,
-      message: data.message,
-      admin: data.admin,
+      message: 'Login successful',
+      admin: {
+        id: admin.id,
+        email: admin.email,
+        name: admin.name,
+        role: admin.role
+      },
     };
   } catch (error) {
     console.error('Login action error:', error);
     return {
       success: false,
-      error: 'Invalid username or password',
+      error: 'Login failed. Please try again.',
     };
   }
 }
 
-export async function Register({ data }) {
-  // Implementation for registration
-  console.log(data)
-  return {
-    success: false,
-    error: 'Registration not implemented',
-  };
+export async function Logout() {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+    
+    if (token) {
+      // Delete session from database
+      await prisma.session.deleteMany({
+        where: {
+          sessionToken: token
+        }
+      });
+      
+      // Clear cookie
+      cookieStore.delete('auth-token');
+    }
+    
+    return {
+      success: true,
+      message: 'Logout successful'
+    };
+  } catch (error) {
+    console.error('Logout action error:', error);
+    return {
+      success: false,
+      error: 'Logout failed. Please try again.',
+    };
+  }
 }
 
 export async function Session() {
-  // Implementation for session management
-  return {
-    success: false,
-    error: 'Session management not implemented',
-  };
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+    
+    if (!token) {
+      return {
+        success: false,
+        error: 'No active session'
+      };
+    }
+    
+    // Check if session exists in database
+    const session = await prisma.session.findUnique({
+      where: {
+        sessionToken: token
+      }
+    });
+    
+    if (!session) {
+      return {
+        success: false,
+        error: 'Session not found'
+      };
+    }
+    
+    // Check if session is expired
+    if (session.expires < new Date()) {
+      // Delete expired session
+      await prisma.session.delete({
+        where: {
+          sessionToken: token
+        }
+      });
+      
+      // Clear cookie
+      cookieStore.delete('auth-token');
+      
+      return {
+        success: false,
+        error: 'Session expired'
+      };
+    }
+    
+    return {
+      success: true,
+      session: {
+        id: session.id,
+        userId: session.userId,
+        expires: session.expires
+      }
+    };
+  } catch (error) {
+    console.error('Session action error:', error);
+    return {
+      success: false,
+      error: 'Session check failed',
+    };
+  }
 }
