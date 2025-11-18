@@ -195,7 +195,6 @@ export function ResellerManagement() {
           onAdd={handleAdd}
           onDelete={handleDelete}
           onAdvancedView={handleAdvancedView}
-          searchField="company_name"
           tableName="resellers"
         />
       </div>

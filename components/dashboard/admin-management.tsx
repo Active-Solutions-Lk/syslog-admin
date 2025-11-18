@@ -212,7 +212,6 @@ export function AdminManagement() {
           onAdd={handleAdd}
           onDelete={handleDelete}
           onAdvancedView={handleAdvancedView}
-          searchField="name"
           tableName="admins"
         />
       </div>

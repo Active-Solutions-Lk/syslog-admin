@@ -1,17 +1,17 @@
-import * as React from "react"
-import { getCurrentUserData } from '@/components/auth/user-data';
+import * as React from "react";
+import { getCurrentUserData } from "@/components/auth/user-data";
 
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { NavMain } from "@/components/nav-main";
+import { NavProjects } from "@/components/nav-projects";
+import { NavUser } from "@/components/nav-user";
+import { TeamSwitcher } from "@/components/team-switcher";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 // Updated data using string identifiers for icons
 const data = {
@@ -48,6 +48,10 @@ const data = {
           url: "/dashboard/projects",
         },
         {
+          title: "End Customer List",
+          url: "/dashboard/end-customer",
+        },
+        {
           title: "Activation Keys",
           url: "/dashboard/activation-keys",
         },
@@ -77,7 +81,7 @@ const data = {
           title: "General",
           url: "/dashboard/settings",
         },
-         {
+        {
           title: "Admins",
           url: "/dashboard/admins",
         },
@@ -89,11 +93,13 @@ const data = {
       name: "Dashboard",
       url: "/dashboard",
       icon: "LayoutDashboard",
-    }
+    },
   ],
-}
+};
 
-export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export async function AppSidebar({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) {
   // Fetch user data on the server side
   const user = await getCurrentUserData();
 
@@ -111,5 +117,5 @@ export async function AppSidebar({ ...props }: React.ComponentProps<typeof Sideb
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

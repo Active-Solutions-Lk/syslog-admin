@@ -41,7 +41,6 @@ interface DataTableProps<TData, TValue> {
   onAdd?: () => void
   onDelete?: (item: TData) => void
   onAdvancedView?: (item: TData) => void
-  searchField?: string // Field to search on
   tableName?: string // Name for display purposes
 }
 
@@ -52,11 +51,11 @@ export function DataTable<TData, TValue>({
   onAdd,
   onDelete,
   onAdvancedView,
-  searchField = "name",
   tableName = "items",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [searchValue, setSearchValue] = React.useState("")
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
   const [contextMenu, setContextMenu] = React.useState<{ 
@@ -67,8 +66,32 @@ export function DataTable<TData, TValue>({
     } | null 
   } | null>(null)
 
+  // Filter data based on search value across all columns
+  const filteredData = React.useMemo(() => {
+    if (!searchValue) return data;
+    
+    return data.filter((row: any) => {
+      // Check all columns for the search value
+      return Object.values(row).some((value: any) => {
+        if (value === null || value === undefined) return false;
+        
+        // Handle nested objects
+        if (typeof value === 'object') {
+          // Recursively check nested object properties
+          return Object.values(value).some((nestedValue: any) => {
+            if (nestedValue === null || nestedValue === undefined) return false;
+            return nestedValue.toString().toLowerCase().includes(searchValue.toLowerCase());
+          });
+        }
+        
+        // Handle primitive values
+        return value.toString().toLowerCase().includes(searchValue.toLowerCase());
+      });
+    });
+  }, [data, searchValue]);
+
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -150,10 +173,8 @@ export function DataTable<TData, TValue>({
           <SearchIcon className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
             placeholder={`Search ${tableName}...`}
-            value={(table.getColumn(searchField)?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn(searchField)?.setFilterValue(event.target.value)
-            }
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
             className="pl-8"
           />
         </div>

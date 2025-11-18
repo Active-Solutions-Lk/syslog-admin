@@ -13,9 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ComboBox } from "@/components/dashboard/combo_box";
 import { useState, useEffect } from "react";
-import { getPackages } from "@/app/actions/project";
+import { getPackages, getAvailablePorts, getPortById } from "@/app/actions/project";
 import { getAdmins } from "@/app/actions/admin";
 import { getResellers } from "@/app/actions/reseller";
+import { getEndCustomers } from "@/app/actions/end-customer";
 
 // Function to generate a unique activation key in format AB12-CD34-EF58
 const generateActivationKey = () => {
@@ -38,11 +39,13 @@ const generateActivationKey = () => {
 interface Project {
   id?: string;
   activation_key?: string;
-  collector_ip: string;
-  loggert_ip: string;
+  collector_ip: string | null;
+  logger_ip: string | null;
   pkg_id: string;
   admin_id?: string | null;
   reseller_id?: string | null;
+  port_id?: string | null;
+  end_customer_id?: string | null;
   created_at?: Date;
   updated_at?: Date;
   admins?: {
@@ -51,6 +54,9 @@ interface Project {
   } | null;
   reseller?: {
     company_name: string;
+  } | null;
+  end_customer?: {
+    company: string | null;
   } | null;
   packages?: {
     name: string;
@@ -66,14 +72,18 @@ interface ProjectDialogProps {
 
 export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDialogProps) {
   const [collector_ip, setCollectorIp] = useState("");
-  const [loggert_ip, setLoggerIp] = useState("");
+  const [logger_ip, setLoggerIp] = useState("");
   const [pkg_id, setPkgId] = useState("");
   const [admin_id, setAdminId] = useState<string | null>(null);
   const [reseller_id, setResellerId] = useState<string | null>(null);
+  const [port_id, setPortId] = useState<string | null>(null);
+  const [end_customer_id, setEndCustomerId] = useState<string | null>(null);
   const [activation_key, setActivationKey] = useState("");
   const [packages, setPackages] = useState<{value: string, label: string}[]>([]);
   const [admins, setAdmins] = useState<{value: string, label: string}[]>([]);
   const [resellers, setResellers] = useState<{value: string, label: string}[]>([]);
+  const [endCustomers, setEndCustomers] = useState<{value: string, label: string}[]>([]);
+  const [availablePorts, setAvailablePorts] = useState<{value: string, label: string}[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Reset form when dialog opens or project changes
@@ -112,12 +122,24 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
             setResellers(resellerOptions);
           }
           
+          // Fetch end customers
+          const endCustomersResult = await getEndCustomers();
+          if (endCustomersResult.success && endCustomersResult.endCustomers) {
+            const endCustomerOptions = endCustomersResult.endCustomers.map(endCustomer => ({
+              value: endCustomer.id,
+              label: endCustomer.company || 'N/A'
+            }));
+            setEndCustomers(endCustomerOptions);
+          }
+          
           if (project) {
             setCollectorIp(project.collector_ip || "");
-            setLoggerIp(project.loggert_ip || "");
+            setLoggerIp(project.logger_ip || "");
             setPkgId(project.pkg_id || "");
             setAdminId(project.admin_id || null);
             setResellerId(project.reseller_id || null);
+            setPortId(project.port_id || null);
+            setEndCustomerId(project.end_customer_id || null);
             setActivationKey(project.activation_key || "");
           } else {
             setCollectorIp("");
@@ -125,6 +147,8 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
             setPkgId("");
             setAdminId(null);
             setResellerId(null);
+            setPortId(null);
+            setEndCustomerId(null);
             // Generate a new activation key for new projects
             const newActivationKey = generateActivationKey();
             setActivationKey(newActivationKey);
@@ -140,26 +164,70 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
     }
   }, [open, project]);
 
-  console.log('loading', loading)
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const projectData: Project = {
-      collector_ip,
-      loggert_ip,
-      pkg_id,
-      admin_id,
-      reseller_id,
-      activation_key: activation_key || undefined,
-    };
-    
-    if (project?.id) {
-      projectData.id = project.id;
+  // Fetch available ports when collector IP changes or when editing a project with an assigned port
+  useEffect(() => {
+    const fetchAvailablePorts = async () => {
+      if (open && collector_ip) {
+        try {
+          const portsResult = await getAvailablePorts(collector_ip);
+          if (portsResult.success && portsResult.ports) {
+            let portOptions = portsResult.ports.map(port => ({
+              value: port.id,
+              label: `Port ${port.port}`
+            }));
+          
+          // If we're editing a project and it has a port assigned that's not in the available list,
+          // add it to the list so it can be selected
+          if (project && project.port_id) {
+            const isPortInList = portOptions.some(option => option.value === project.port_id);
+            if (!isPortInList) {
+              // Get the port details to add it to the list
+              const portResult = await getPortById(project.port_id);
+              if (portResult.success && portResult.port) {
+                const assignedPortOption = {
+                  value: portResult.port.id,
+                  label: `Port ${portResult.port.port} (currently assigned)`
+                };
+                portOptions = [assignedPortOption, ...portOptions];
+              }
+            }
+          }
+          
+          setAvailablePorts(portOptions);
+        }
+      } catch (error) {
+        console.error('Error fetching available ports:', error);
+      }
+    } else {
+      setAvailablePorts([]);
     }
-    
-    onSave(projectData);
   };
+  
+  fetchAvailablePorts();
+}, [open, collector_ip, project]);
+
+console.log('loading', loading)
+
+const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  const projectData: Project = {
+    collector_ip: collector_ip || null,
+    logger_ip: logger_ip || null,
+    pkg_id,
+    admin_id,
+    reseller_id,
+    port_id,
+    end_customer_id,
+    activation_key: activation_key || undefined,
+  };
+  
+  if (project?.id) {
+    projectData.id = project.id;
+  }
+  
+  onSave(projectData);
+};
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -209,12 +277,12 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="loggert_ip" className="text-right">
+              <Label htmlFor="logger_ip" className="text-right">
                 Logger IP
               </Label>
               <Input
-                id="loggert_ip"
-                value={loggert_ip}
+                id="logger_ip"
+                value={logger_ip}
                 onChange={(e) => setLoggerIp(e.target.value)}
                 className="col-span-3"
                 
@@ -262,6 +330,36 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
                   placeholder="Select a reseller..."
                   searchPlaceholder="Search resellers..."
                   emptyMessage="No resellers found."
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="port_id" className="text-right">
+                Port
+              </Label>
+              <div className="col-span-3">
+                <ComboBox
+                  options={availablePorts}
+                  value={port_id || ""}
+                  onValueChange={(value: string) => setPortId(value || null)}
+                  placeholder="Select a port..."
+                  searchPlaceholder="Search ports..."
+                  emptyMessage="No available ports found."
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="end_customer_id" className="text-right">
+                End Customer
+              </Label>
+              <div className="col-span-3">
+                <ComboBox
+                  options={endCustomers}
+                  value={end_customer_id || ""}
+                  onValueChange={(value: string) => setEndCustomerId(value || null)}
+                  placeholder="Select an end customer..."
+                  searchPlaceholder="Search end customers..."
+                  emptyMessage="No end customers found."
                 />
               </div>
             </div>

@@ -194,7 +194,6 @@ export function PackageManagement() {
           onAdd={handleAdd}
           onDelete={handleDelete}
           onAdvancedView={handleAdvancedView}
-          searchField="name"
           tableName="packages"
         />
       </div>

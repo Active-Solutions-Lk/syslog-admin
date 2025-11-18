@@ -16,11 +16,13 @@ import { CellContext } from "@tanstack/react-table";
 interface ProjectFromServer {
   id: string;
   activation_key: string;
-  collector_ip: string;
-  loggert_ip: string;
+  collector_ip: string | null;
+  logger_ip: string | null;
   pkg_id: string;
   admin_id: string | null;
   reseller_id: string | null;
+  port_id: string | null;
+  end_customer_id: string | null;
   created_at?: Date;
   updated_at?: Date;
   admins?: {
@@ -29,6 +31,9 @@ interface ProjectFromServer {
   } | null;
   reseller?: {
     company_name: string;
+  } | null;
+  end_customer?: {
+    company: string | null;
   } | null;
   packages?: {
     name: string;
@@ -38,11 +43,13 @@ interface ProjectFromServer {
 interface Project {
   id?: string;
   activation_key?: string;
-  collector_ip: string;
-  loggert_ip: string;
+  collector_ip: string | null;
+  logger_ip: string | null;
   pkg_id: string;
   admin_id?: string | null;
   reseller_id?: string | null;
+  port_id?: string | null;
+  end_customer_id?: string | null;
   created_at?: Date;
   updated_at?: Date;
   admins?: {
@@ -51,6 +58,9 @@ interface Project {
   } | null;
   reseller?: {
     company_name: string;
+  } | null;
+  end_customer?: {
+    company: string | null;
   } | null;
   packages?: {
     name: string;
@@ -77,7 +87,7 @@ const columns = [
     header: "Collector IP",
   },
   {
-    accessorKey: "loggert_ip",
+    accessorKey: "logger_ip",
     header: "Logger IP",
   },
   {
@@ -99,6 +109,13 @@ const columns = [
     header: "Reseller",
     cell: ({ row }: CellContext<Project, unknown>) => (
       <span>{row.original.reseller?.company_name || 'N/A'}</span>
+    ),
+  },
+  {
+    accessorKey: "end_customer.company",
+    header: "End Customer",
+    cell: ({ row }: CellContext<Project, unknown>) => (
+      <span>{row.original.end_customer?.company || 'N/A'}</span>
     ),
   },
   {
@@ -183,15 +200,15 @@ export function ProjectManagement() {
       
       if (project.id) {
         // Update existing project
-        const { id, activation_key, collector_ip, loggert_ip, pkg_id, admin_id, reseller_id } = project;
-        result = await updateProject({ id, activation_key, collector_ip, loggert_ip, pkg_id, admin_id, reseller_id });
+        const { id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id } = project;
+        result = await updateProject({ id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id });
         if (result.success) {
           setProjects(projects.map(p => p.id === project.id ? result.project! : p));
         }
       } else {
         // Add new project
-        const { collector_ip, loggert_ip, pkg_id, admin_id, reseller_id } = project;
-        result = await createProject({ collector_ip, loggert_ip, pkg_id, admin_id, reseller_id });
+        const { collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id } = project;
+        result = await createProject({ collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id });
         if (result.success) {
           setProjects([...projects, result.project!]);
         }
@@ -218,7 +235,7 @@ export function ProjectManagement() {
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Project Management</h1>
-        <Button onClick={handleAdd}>Add Project</Button>
+        {/* <Button onClick={handleAdd}>Add Project</Button> */}
       </div>
       
       <div className="bg-white rounded-lg border-0">
@@ -229,7 +246,6 @@ export function ProjectManagement() {
           onAdd={handleAdd}
           onDelete={handleDelete}
           onAdvancedView={handleAdvancedView}
-          searchField="activation_key"
           tableName="projects"
         />
       </div>
