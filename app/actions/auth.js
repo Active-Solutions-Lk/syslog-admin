@@ -5,7 +5,13 @@ import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
 
 // Generate JWT secret
 async function getJwtSecret() {
@@ -73,16 +79,29 @@ export async function Login({ userName, password }) {
     // Create session in database
     const sessionId = `session_${admin.id}_${Date.now()}`;
     const now = new Date();
+    const sessionData = {
+      id: sessionId,
+      userId: admin.id.toString(),
+      sessionToken: token,
+      expires: new Date(Date.now() + 60 * 60 * 24 * 1000), // 24 hours
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    console.log('Creating session with data:', sessionData);
+    
     await prisma.session.create({
-      data: {
-        id: sessionId,
-        userId: admin.id.toString(),
-        sessionToken: token,
-        expires: new Date(Date.now() + 60 * 60 * 24 * 1000), // 24 hours
-        createdAt: now,
-        updatedAt: now, // Add the required updatedAt field
+      data: sessionData
+    });
+    
+    // Verify session was created
+    const createdSession = await prisma.session.findUnique({
+      where: {
+        sessionToken: token
       }
     });
+    
+    console.log('Created session in database:', createdSession);
 
     return {
       success: true,

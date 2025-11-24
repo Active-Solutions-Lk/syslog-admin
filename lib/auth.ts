@@ -5,7 +5,13 @@ import { cookies } from 'next/headers';
 // import { NextRequest } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
 
 // Get JWT secret
 async function getJwtSecret() {
@@ -40,6 +46,8 @@ export async function getCurrentUser() {
     const cookieStore = await cookies();
     const token = cookieStore.get('auth-token')?.value;
     
+    console.log('Token from cookie:', token);
+    
     if (!token) {
       return { user: null, error: 'No token provided' };
     }
@@ -50,12 +58,16 @@ export async function getCurrentUser() {
       return { user: null, error: error || 'Invalid token' };
     }
     
+    console.log('Token verified, payload:', payload);
+    
     // Check if session exists in database
     const session = await prisma.session.findUnique({
       where: {
         sessionToken: token
       }
     });
+    
+    console.log('Session from database:', session);
     
     if (!session) {
       return { user: null, error: 'Session not found' };

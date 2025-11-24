@@ -24,21 +24,6 @@ const data = {
   ],
   navMain: [
     {
-      title: "Packages",
-      url: "#",
-      icon: "Package",
-      items: [
-        {
-          title: "Package List",
-          url: "/dashboard/packages",
-        },
-        {
-          title: "Ports",
-          url: "/dashboard/ports",
-        },
-      ],
-    },
-    {
       title: "Projects",
       url: "#",
       icon: "FolderOpen",
@@ -48,17 +33,30 @@ const data = {
           url: "/dashboard/projects",
         },
         {
-          title: "End Customer List",
-          url: "/dashboard/end-customer",
+          title: "Ports",
+          url: "/dashboard/ports",
         },
         {
-          title: "Activation Keys",
-          url: "/dashboard/activation-keys",
+          title: "Collectors",
+          url: "/dashboard/collectors",
         },
       ],
     },
     {
-      title: "Resellers",
+      title: "Packages",
+      url: "#",
+      icon: "Package",
+      items: [
+        {
+          title: "Package List",
+          url: "/dashboard/packages",
+        },
+        
+      ],
+    },
+    
+    {
+      title: "Customers",
       url: "#",
       icon: "Building",
       items: [
@@ -66,9 +64,9 @@ const data = {
           title: "Reseller List",
           url: "/dashboard/resellers",
         },
-        {
-          title: "Companies",
-          url: "/dashboard/companies",
+         {
+          title: "End Customer List",
+          url: "/dashboard/end-customer",
         },
       ],
     },

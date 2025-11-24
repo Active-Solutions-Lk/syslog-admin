@@ -7,6 +7,20 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model internal_log {
+  id               Int      @id @default(autoincrement())
+  related_table    String?  @db.VarChar(100)
+  related_table_id Int?
+  severity         Int
+  message          String   @db.VarChar(100)
+  admin_id         Int?
+  action           String   @db.VarChar(100)
+  status_code      Int
+  additional_data  String?  @db.VarChar(100)
+  created_at       DateTime @default(now()) @db.Timestamp(0)
+  updated_at       DateTime @default(now()) @db.Timestamp(0)
+}
+
 model admins {
   id           Int        @id @default(autoincrement())
   name         String?
@@ -34,11 +48,11 @@ model packages {
 }
 
 model ports {
-  id         Int       @id @default(autoincrement())
+  id         Int        @id @default(autoincrement())
   port       Int
-  created_at DateTime  @default(now()) @db.Timestamp(0)
-  updated_at DateTime  @default(now()) @db.Timestamp(0)
-  project    projects?
+  created_at DateTime   @default(now()) @db.Timestamp(0)
+  updated_at DateTime   @default(now()) @db.Timestamp(0)
+  projects   projects[]
 }
 
 model projects {
@@ -46,17 +60,22 @@ model projects {
   activation_key  String        @unique @db.VarChar(50)
   pkg_id          Int
   admin_id        Int?
-  collector_ip    String?       @db.VarChar(50)
+  collector_ip    Int?
   logger_ip       String?       @db.VarChar(50)
   reseller_id     Int?
+  type            Int
   created_at      DateTime      @default(now()) @db.Timestamp(0)
   updated_at      DateTime      @default(now()) @db.Timestamp(0)
   end_customer_id Int?
-  port_id         Int?          @unique(map: "unique_port_id")
+  port_id         Int?
+  secret_key      String        @unique @db.VarChar(100)
+  status          Boolean
   admins          admins?       @relation(fields: [admin_id], references: [id], onDelete: Cascade, map: "fk_admin_id_admins_id")
+  collector       collectors?   @relation(fields: [collector_ip], references: [id], map: "fk_collector_ip_collectors_id")
   end_customer    end_customer? @relation(fields: [end_customer_id], references: [id], onDelete: Cascade, map: "fk_end_customer_id")
   packages        packages      @relation(fields: [pkg_id], references: [id], onDelete: Cascade, map: "fk_pkgid_package")
   port            ports?        @relation(fields: [port_id], references: [id], map: "fk_port_id_with_ports_id")
+  project_type    project_types @relation(fields: [type], references: [id], map: "fk_project_type_id")
   reseller        reseller?     @relation(fields: [reseller_id], references: [customer_id], onDelete: Cascade, map: "fk_reseller_id_with_reseller_id")
 
   @@unique([collector_ip, port_id], map: "unique_collector_port")
@@ -65,6 +84,8 @@ model projects {
   @@index([pkg_id], map: "pkg_id")
   @@index([end_customer_id], map: "end_customer_id")
   @@index([port_id], map: "port_id")
+  @@index([type], map: "fk_project_type_id_idx")
+  @@index([collector_ip], map: "fk_collector_ip_collectors_id_idx")
 }
 
 model reseller {
@@ -88,7 +109,7 @@ model session {
   id           String   @id
   userId       String
   createdAt    DateTime @default(now())
-  updatedAt    DateTime
+  updatedAt    DateTime @updatedAt
   expires      DateTime
   sessionToken String   @unique(map: "Session_sessionToken_key")
 
@@ -106,4 +127,22 @@ model end_customer {
   created_at     DateTime   @default(now()) @db.Timestamp(0)
   updated_at     DateTime   @default(now()) @db.Timestamp(0)
   projects       projects[]
+}
+
+model project_types {
+  id       Int        @id @default(autoincrement())
+  name     String?    @db.VarChar(10)
+  projects projects[]
+}
+
+model collectors {
+  id              Int       @id @default(autoincrement())
+  name            String    @db.VarChar(50)
+  ip              String    @db.VarChar(100)
+  secret_key      String    @db.VarChar(100)
+  last_fetched_id Int
+  is_active       Boolean
+  created_at      DateTime  @default(now()) @db.Timestamp(0)
+  updated_at      DateTime  @default(now()) @db.Timestamp(0)
+  projects        projects[]
 }

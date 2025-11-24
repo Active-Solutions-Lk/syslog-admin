@@ -14,7 +14,7 @@ async function main() {
     const projectCount = await prisma.projects.count();
     console.log(`Database connection successful. Found ${projectCount} projects.`);
   } catch (error) {
-    console.error('Database connection failed:', (error as Error).message);
+    console.error('Database connection failed:', error.message);
   } finally {
     await prisma.$disconnect();
   }

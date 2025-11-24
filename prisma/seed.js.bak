@@ -266,66 +266,12 @@ async function main() {
     }
   }
 
-  // Create sample collectors
-  const collectorData = [
-    {
-      name: 'Collector 1',
-      ip: '192.168.1.10',
-      secret_key: 'collector-secret-1',
-      last_fetched_id: 0,
-      is_active: true,
-    },
-    {
-      name: 'Collector 2',
-      ip: '192.168.2.10',
-      secret_key: 'collector-secret-2',
-      last_fetched_id: 0,
-      is_active: true,
-    },
-    {
-      name: 'Collector 3',
-      ip: '192.168.3.10',
-      secret_key: 'collector-secret-3',
-      last_fetched_id: 0,
-      is_active: true,
-    },
-  ];
-
-  const collectors = [];
-  for (const collector of collectorData) {
-    // Check if collector already exists
-    const existingCollector = await prisma.collectors.findFirst({
-      where: {
-        ip: collector.ip,
-      },
-    });
-
-    if (existingCollector) {
-      collectors.push(existingCollector);
-      console.log(`Collector already exists: ${existingCollector.name}`);
-    } else {
-      const createdCollector = await prisma.collectors.create({
-        data: {
-          name: collector.name,
-          ip: collector.ip,
-          secret_key: collector.secret_key,
-          last_fetched_id: collector.last_fetched_id,
-          is_active: collector.is_active,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-      });
-      collectors.push(createdCollector);
-      console.log(`Created collector: ${createdCollector.name}`);
-    }
-  }
-
   // Create sample projects
   const projectData = [
     {
       activation_key: 'ACT-KEY-001',
       secret_key: 'SECRET-KEY-001',
-      // collector_ip will be set to collector ID instead of IP string
+      collector_ip: '192.168.1.10',
       logger_ip: '192.168.1.11',
       pkg_id: packages[0].id,
       admin_id: admins[0].id,
@@ -333,12 +279,11 @@ async function main() {
       end_customer_id: endCustomers[0].id,
       status: true,
       type: 1, // Will be updated later with actual project type
-      collector_id: collectors[0].id, // Reference to collector by ID
     },
     {
       activation_key: 'ACT-KEY-002',
       secret_key: 'SECRET-KEY-002',
-      // collector_ip will be set to collector ID instead of IP string
+      collector_ip: '192.168.2.10',
       logger_ip: '192.168.2.11',
       pkg_id: packages[1].id,
       admin_id: admins[1].id,
@@ -346,18 +291,16 @@ async function main() {
       end_customer_id: endCustomers[1].id,
       status: true,
       type: 2, // Will be updated later with actual project type
-      collector_id: collectors[1].id, // Reference to collector by ID
     },
     {
       activation_key: 'ACT-KEY-003',
       secret_key: 'SECRET-KEY-003',
-      // collector_ip will be set to collector ID instead of IP string
+      collector_ip: '192.168.3.10',
       logger_ip: '192.168.3.11',
       pkg_id: packages[2].id,
       admin_id: admins[2].id,
       status: true,
       type: 3, // Will be updated later with actual project type
-      collector_id: collectors[2].id, // Reference to collector by ID
     },
   ];
 
@@ -378,7 +321,7 @@ async function main() {
         data: {
           activation_key: project.activation_key,
           secret_key: project.secret_key,
-          collector_ip: project.collector_id, // Use collector ID instead of IP string
+          collector_ip: project.collector_ip,
           logger_ip: project.logger_ip,
           pkg_id: project.pkg_id,
           admin_id: project.admin_id,

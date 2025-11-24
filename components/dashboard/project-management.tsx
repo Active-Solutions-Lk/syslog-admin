@@ -8,8 +8,10 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
-import { getProjects, createProject, updateProject, deleteProject } from "@/app/actions/project";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useState, useEffect, useMemo } from "react";
+import { getProjects, createProject, updateProject, deleteProject, updateProjectStatus } from "@/app/actions/project";
 import { CellContext } from "@tanstack/react-table";
 
 // Define types
@@ -23,6 +25,8 @@ interface ProjectFromServer {
   reseller_id: string | null;
   port_id: string | null;
   end_customer_id: string | null;
+  type: string; // Add type field
+  status: boolean;
   created_at?: Date;
   updated_at?: Date;
   admins?: {
@@ -37,6 +41,12 @@ interface ProjectFromServer {
   } | null;
   packages?: {
     name: string;
+  } | null;
+  port?: {
+    port: number;
+  } | null;
+  project_type?: { // Add project_type field
+    name: string | null; // Make name nullable
   } | null;
 }
 
@@ -50,6 +60,8 @@ interface Project {
   reseller_id?: string | null;
   port_id?: string | null;
   end_customer_id?: string | null;
+  type?: string; // Add type field
+  status?: boolean;
   created_at?: Date;
   updated_at?: Date;
   admins?: {
@@ -65,74 +77,13 @@ interface Project {
   packages?: {
     name: string;
   } | null;
+  port?: {
+    port: number;
+  } | null;
+  project_type?: { // Add project_type field
+    name: string | null; // Make name nullable
+  } | null;
 }
-
-// Define columns for the data table
-const columns = [
-  {
-    accessorKey: "activation_key",
-    header: "Activation Key",
-    cell: ({ row }: CellContext<Project, unknown>) => (
-      <div className="flex items-center gap-3">
-        <Avatar className="h-8 w-8">
-          <AvatarImage src={`https://api.dicebear.com/6.x/initials/svg?seed=${row.original.activation_key || 'P'}`} />
-          <AvatarFallback>{row.original.activation_key?.charAt(0) || 'P'}</AvatarFallback>
-        </Avatar>
-        <span>{row.original.activation_key || 'N/A'}</span>
-      </div>
-    ),
-  },
-  {
-    accessorKey: "collector_ip",
-    header: "Collector IP",
-  },
-  {
-    accessorKey: "logger_ip",
-    header: "Logger IP",
-  },
-  {
-    accessorKey: "packages.name",
-    header: "Package",
-    cell: ({ row }: CellContext<Project, unknown>) => (
-      <span>{row.original.packages?.name || 'N/A'}</span>
-    ),
-  },
-  {
-    accessorKey: "admins.name",
-    header: "Admin",
-    cell: ({ row }: CellContext<Project, unknown>) => (
-      <span>{row.original.admins?.name || 'N/A'}</span>
-    ),
-  },
-  {
-    accessorKey: "reseller.company_name",
-    header: "Reseller",
-    cell: ({ row }: CellContext<Project, unknown>) => (
-      <span>{row.original.reseller?.company_name || 'N/A'}</span>
-    ),
-  },
-  {
-    accessorKey: "end_customer.company",
-    header: "End Customer",
-    cell: ({ row }: CellContext<Project, unknown>) => (
-      <span>{row.original.end_customer?.company || 'N/A'}</span>
-    ),
-  },
-  {
-    accessorKey: "created_at",
-    header: "Created",
-    cell: ({ row }: CellContext<Project, unknown>) => (
-      <span>{row.original.created_at ? new Date(row.original.created_at).toLocaleString() : 'N/A'}</span>
-    ),
-  },
-  {
-    accessorKey: "updated_at",
-    header: "Updated",
-    cell: ({ row }: CellContext<Project, unknown>) => (
-      <span>{row.original.updated_at ? new Date(row.original.updated_at).toLocaleString() : 'N/A'}</span>
-    ),
-  },
-];
 
 export function ProjectManagement() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -194,21 +145,122 @@ export function ProjectManagement() {
     // In a real app, this would navigate to a detailed view
   };
 
+  const handleStatusChange = async (project: Project, newStatus: boolean) => {
+    if (!project.id) return;
+    
+    try {
+      const result = await updateProjectStatus(project.id, newStatus);
+      if (result.success) {
+        setProjects(projects.map(p => 
+          p.id === project.id ? { ...p, status: newStatus } : p
+        ));
+      } else {
+        console.error('Failed to update project status:', result.error);
+        alert('Failed to update project status: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error updating project status:', error);
+      alert('Error updating project status');
+    }
+  };
+
+  // Define columns for the data table using useMemo to prevent re-creation on every render
+  const columns = useMemo(() => [
+    {
+      accessorKey: "activation_key",
+      header: "Activation Key",
+      cell: ({ row }: CellContext<Project, unknown>) => (
+        <div className="flex items-center gap-3">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={`https://api.dicebear.com/6.x/initials/svg?seed=${row.original.activation_key || 'P'}`} />
+            <AvatarFallback>{row.original.activation_key?.charAt(0) || 'P'}</AvatarFallback>
+          </Avatar>
+          <span>{row.original.activation_key || 'N/A'}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "collector_ip",
+      header: "Collector IP",
+    },
+    {
+      accessorKey: "logger_ip",
+      header: "Logger IP",
+    },
+    {
+      accessorKey: "packages.name",
+      header: "Package",
+      cell: ({ row }: CellContext<Project, unknown>) => (
+        <span>{row.original.packages?.name || 'N/A'}</span>
+      ),
+    },
+    {
+      accessorKey: "admins.name",
+      header: "Admin",
+      cell: ({ row }: CellContext<Project, unknown>) => (
+        <span>{row.original.admins?.name || 'N/A'}</span>
+      ),
+    },
+    {
+      accessorKey: "reseller.company_name",
+      header: "Reseller",
+      cell: ({ row }: CellContext<Project, unknown>) => (
+        <span>{row.original.reseller?.company_name || 'N/A'}</span>
+      ),
+    },
+    {
+      accessorKey: "end_customer.company",
+      header: "End Customer",
+      cell: ({ row }: CellContext<Project, unknown>) => (
+        <span>{row.original.end_customer?.company || 'N/A'}</span>
+      ),
+    },
+    {
+      accessorKey: "port_id",
+      header: "Port",
+      cell: ({ row }: CellContext<Project, unknown>) => (
+        <span>{row.original.port ? `${row.original.port.port}` : 'N/A'}</span>
+      ),
+    },
+    {
+      accessorKey: "project_type.name", // Add project type column
+      header: "Project Type",
+      cell: ({ row }: CellContext<Project, unknown>) => (
+        <span>{row.original.project_type?.name || 'N/A'}</span>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }: CellContext<Project, unknown>) => (
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={row.original.status}
+            onCheckedChange={(checked: boolean) => handleStatusChange(row.original, checked)}
+          />
+          <span className="text-sm">
+            {row.original.status ? "Enabled" : "Disabled"}
+          </span>
+        </div>
+      ),
+    },
+  ], [handleStatusChange]);
+
   const handleSaveProject = async (project: Project) => {
     try {
       let result: { success: boolean; project?: ProjectFromServer; error?: string };
       
       if (project.id) {
         // Update existing project
-        const { id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id } = project;
-        result = await updateProject({ id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id });
+        const { id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, status } = project; // Add type
+        result = await updateProject({ id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, status }); // Add type
         if (result.success) {
           setProjects(projects.map(p => p.id === project.id ? result.project! : p));
         }
       } else {
         // Add new project
-        const { collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id } = project;
-        result = await createProject({ collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id });
+        const { collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type } = project; // Add type
+        result = await createProject({ collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type }); // Add type
         if (result.success) {
           setProjects([...projects, result.project!]);
         }

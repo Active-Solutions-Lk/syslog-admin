@@ -2,8 +2,13 @@
 
 import { PrismaClient } from '@prisma/client';
 
-// Create a single Prisma client instance
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
 
 export async function getResellers() {
   try {
