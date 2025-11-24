@@ -25,13 +25,16 @@ interface ProjectFromServer {
   reseller_id: string | null;
   port_id: string | null;
   end_customer_id: string | null;
-  type: string; // Add type field
+  type: string;
   status: boolean;
   created_at?: Date;
   updated_at?: Date;
   admins?: {
     name: string | null;
     email: string;
+  } | null;
+  collector?: { // Add collector field
+    name: string | null;
   } | null;
   reseller?: {
     company_name: string;
@@ -45,8 +48,8 @@ interface ProjectFromServer {
   port?: {
     port: number;
   } | null;
-  project_type?: { // Add project_type field
-    name: string | null; // Make name nullable
+  project_type?: {
+    name: string | null;
   } | null;
 }
 
@@ -60,13 +63,16 @@ interface Project {
   reseller_id?: string | null;
   port_id?: string | null;
   end_customer_id?: string | null;
-  type?: string; // Add type field
+  type?: string;
   status?: boolean;
   created_at?: Date;
   updated_at?: Date;
   admins?: {
     name: string | null;
     email: string;
+  } | null;
+  collector?: { // Add collector field
+    name: string | null;
   } | null;
   reseller?: {
     company_name: string;
@@ -80,8 +86,8 @@ interface Project {
   port?: {
     port: number;
   } | null;
-  project_type?: { // Add project_type field
-    name: string | null; // Make name nullable
+  project_type?: {
+    name: string | null;
   } | null;
 }
 
@@ -180,8 +186,11 @@ export function ProjectManagement() {
       ),
     },
     {
-      accessorKey: "collector_ip",
-      header: "Collector IP",
+      accessorKey: "collector.name", // Change to collector name
+      header: "Collector",
+      cell: ({ row }: CellContext<Project, unknown>) => (
+        <span>{row.original.collector?.name || 'N/A'}</span>
+      ),
     },
     {
       accessorKey: "logger_ip",
@@ -219,11 +228,11 @@ export function ProjectManagement() {
       accessorKey: "port_id",
       header: "Port",
       cell: ({ row }: CellContext<Project, unknown>) => (
-        <span>{row.original.port ? `${row.original.port.port}` : 'N/A'}</span>
+        <span>{row.original.port ? `Port ${row.original.port.port}` : 'N/A'}</span>
       ),
     },
     {
-      accessorKey: "project_type.name", // Add project type column
+      accessorKey: "project_type.name",
       header: "Project Type",
       cell: ({ row }: CellContext<Project, unknown>) => (
         <span>{row.original.project_type?.name || 'N/A'}</span>
@@ -252,15 +261,15 @@ export function ProjectManagement() {
       
       if (project.id) {
         // Update existing project
-        const { id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, status } = project; // Add type
-        result = await updateProject({ id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, status }); // Add type
+        const { id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, status } = project;
+        result = await updateProject({ id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, status });
         if (result.success) {
           setProjects(projects.map(p => p.id === project.id ? result.project! : p));
         }
       } else {
         // Add new project
-        const { collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type } = project; // Add type
-        result = await createProject({ collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type }); // Add type
+        const { collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type } = project;
+        result = await createProject({ collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type });
         if (result.success) {
           setProjects([...projects, result.project!]);
         }

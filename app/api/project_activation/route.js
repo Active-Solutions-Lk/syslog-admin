@@ -90,23 +90,13 @@ function parseSecureToken(secureToken, clientIp) {
     // For IPv6-mapped IPv4 addresses, we need to remove the :::ffff: part from the secret
     // The secret ends with :::ffff: for IPv6-mapped addresses
     if (clientIp.startsWith('::ffff:')) {
-      console.log('Processing IPv6-mapped IPv4 address');
-      console.log('Raw secret:', secret);
-      console.log('Secret length:', secret.length);
-      
       // Check if the secret ends with :::ffff: and remove it
       if (secret.endsWith(':::ffff:')) {
-        console.log('Secret ends with :::ffff:, removing 7 characters');
         secret = secret.substring(0, secret.length - 7); // Remove :::ffff:
-        console.log('New secret:', secret);
       } 
       // Check if the secret ends with :::ffff (without trailing colon) and remove it
       else if (secret.endsWith(':::ffff')) {
-        console.log('Secret ends with :::ffff, removing 6 characters');
         secret = secret.substring(0, secret.length - 7); // Remove :::ffff
-        console.log('New secret:', secret);
-      } else {
-        console.log('Secret does not end with :::ffff or :::ffff:');
       }
     }
     
@@ -138,7 +128,7 @@ function calculateProjectEndDate(startDate, pkg) {
 }
 
 export async function POST(request) {
-  console.log('Project activation request received');
+  // console.log('Project activation request received');
   
   // Log the incoming request
   await createInternalLog({
@@ -156,25 +146,31 @@ export async function POST(request) {
   try {
     // Parse the request body
     const body = await request.json();
-    const { activation_key, host_ip, secure_token } = body;
+    // Accept both host_ip and client_ip for compatibility
+    const { activation_key, host_ip, client_ip, secure_token } = body;
+    
+    // Use host_ip if provided, otherwise fallback to client_ip
+    const ip_address = host_ip || client_ip;
 
-    console.log('Activation request received:', {
-      activation_key,
-      host_ip,
-      secure_token: secure_token ? `${secure_token.substring(0, 20)}...` : null
-    });
+    // console.log('Activation request received:', {
+    //   activation_key,
+    //   host_ip,
+    //   client_ip,
+    //   ip_address,
+    //   secure_token: secure_token ? `${secure_token.substring(0, 20)}...` : null
+    // });
 
     // Validate required fields
-    if (!activation_key || !host_ip || !secure_token) {
+    if (!activation_key || !ip_address || !secure_token) {
       console.log('Missing required fields:', {
         activation_key: !!activation_key,
-        host_ip: !!host_ip,
+        ip_address: !!ip_address,
         secure_token: !!secure_token
       });
       
       const errorResponse = {
         success: false,
-        error: 'Missing required fields: activation_key, host_ip, secure_token'
+        error: 'Missing required fields: activation_key, host_ip/client_ip, secure_token'
       };
       
       await createInternalLog({
@@ -185,7 +181,7 @@ export async function POST(request) {
         additional_data: {
           missing_fields: {
             activation_key: !!activation_key,
-            host_ip: !!host_ip,
+            ip_address: !!ip_address,
             secure_token: !!secure_token
           }
         }
@@ -195,7 +191,7 @@ export async function POST(request) {
     }
 
     // Parse and validate the secure token
-    const tokenData = parseSecureToken(secure_token, host_ip);
+    const tokenData = parseSecureToken(secure_token, ip_address);
     
     if (!tokenData) {
       console.error('Invalid secure token format');
@@ -219,16 +215,16 @@ export async function POST(request) {
     
     // Normalize IPs for comparison
     const normalizedTokenIp = normalizeIpAddress(ip);
-    const normalizedClientIp = normalizeIpAddress(host_ip);
+    const normalizedClientIp = normalizeIpAddress(ip_address);
 
-    console.log('Parsed token components:', {
-      activationKey,
-      secret,
-      tokenIp: ip,
-      normalizedTokenIp,
-      clientIp: host_ip,
-      normalizedClientIp
-    });
+    // console.log('Parsed token components:', {
+    //   activationKey,
+    //   secret,
+    //   tokenIp: ip,
+    //   normalizedTokenIp,
+    //   clientIp: ip_address,
+    //   normalizedClientIp
+    // });
 
     // Verify the activation key matches
     if (activationKey !== activation_key) {
@@ -279,7 +275,7 @@ export async function POST(request) {
     // Verify the IP matches
     if (normalizedTokenIp !== normalizedClientIp) {
       console.warn('IP mismatch:', {
-        provided: host_ip,
+        provided: ip_address,
         normalizedProvided: normalizedClientIp,
         tokenIp: ip,
         normalizedTokenIp: normalizedTokenIp
@@ -292,7 +288,7 @@ export async function POST(request) {
         severity: 2,
         status_code: 200,
         additional_data: {
-          provided: host_ip,
+          provided: ip_address,
           normalizedProvided: normalizedClientIp,
           tokenIp: ip,
           normalizedTokenIp: normalizedTokenIp
@@ -308,7 +304,9 @@ export async function POST(request) {
       include: {
         packages: true,
         end_customer: true,
-        reseller: true
+        reseller: true,
+        collector: true, // Include collector relation
+        port: true // Include port relation to get the actual port value
       }
     });
 
@@ -333,17 +331,17 @@ export async function POST(request) {
       return NextResponse.json(errorResponse, { status: 404 });
     }
 
-    console.log('Found project:', {
-      id: project.id,
-      activation_key: project.activation_key,
-      status: project.status,
-      logger_ip: project.logger_ip,
-      collector_ip: project.collector_ip,
-      type: project.type,
-      hasPackage: !!project.packages,
-      hasEndCustomer: !!project.end_customer,
-      hasReseller: !!project.reseller
-    });
+    // console.log('Found project:', {
+    //   id: project.id,
+    //   activation_key: project.activation_key,
+    //   status: project.status,
+    //   logger_ip: project.logger_ip,
+    //   collector_ip: project.collector_ip,
+    //   type: project.type,
+    //   hasPackage: !!project.packages,
+    //   hasEndCustomer: !!project.end_customer,
+    //   hasReseller: !!project.reseller
+    // });
 
     // Check if project is already registered (has logger_ip and either reseller or end_customer)
     if (project.logger_ip && (project.end_customer_id || project.reseller_id)) {
@@ -428,12 +426,13 @@ export async function POST(request) {
     }
 
     // Normalize the client IP
-    const normalizedHostIp = normalizeIpAddress(host_ip);
+    const normalizedHostIp = normalizeIpAddress(ip_address);
 
     // Handle based on project type
     if (project.type === 1) {
       // Cloud project type
       console.log('Processing cloud project:', project.id);
+      console.log('Available Project dara:', project);
       
       // Update the logger_ip with the received IP
       await prisma.projects.update({
@@ -446,10 +445,10 @@ export async function POST(request) {
         }
       });
       
-      console.log('Cloud project updated with logger_ip:', {
-        projectId: project.id,
-        loggerIp: normalizedHostIp
-      });
+      // console.log('Cloud project updated with logger_ip:', {
+      //   projectId: project.id,
+      //   loggerIp: normalizedHostIp
+      // });
       
       // Calculate project end date
       const projectEndDate = calculateProjectEndDate(project.created_at, project.packages);
@@ -460,14 +459,18 @@ export async function POST(request) {
         message: 'Project activated successfully',
         data: {
           company_name: companyName,
-          collector_ip: project.collector_ip,
-          port: project.port_id,
+          collector_ip: project.collector ? project.collector.ip : null, // Return collector IP address instead of ID
+          collector_ip_address: project.collector ? project.collector.ip : null,
+          port: project.port ? project.port.port : null, // Return actual port value instead of ID
           package_name: project.packages.name,
           log_quota: project.packages.log_count,
           device_count: project.packages.device_count,
           project_end_date: projectEndDate.toISOString()
         }
       };
+
+
+      console.log('Cloud project data:', responseData);
       
       await createInternalLog({
         message: 'Cloud project activated successfully',
@@ -486,23 +489,23 @@ export async function POST(request) {
       // On-prem project type
       console.log('Processing on-prem project:', project.id);
       
-      // Update both collector_ip and logger_ip with the received IP
+      // For on-prem projects, we update the logger_ip with the received IP
+      // and leave collector_ip as null (no collector relation)
       await prisma.projects.update({
         where: {
           id: project.id
         },
         data: {
-          collector_ip: normalizedHostIp,
           logger_ip: normalizedHostIp,
           updated_at: new Date()
+          // Note: collector_ip remains null for on-prem projects
         }
       });
       
-      console.log('On-prem project updated with IPs:', {
-        projectId: project.id,
-        collectorIp: normalizedHostIp,
-        loggerIp: normalizedHostIp
-      });
+      // console.log('On-prem project updated with logger_ip:', {
+      //   projectId: project.id,
+      //   loggerIp: normalizedHostIp
+      // });
       
       // Calculate project end date
       const projectEndDate = calculateProjectEndDate(project.created_at, project.packages);
@@ -513,13 +516,17 @@ export async function POST(request) {
         message: 'Project activated successfully',
         data: {
           company_name: companyName,
+          collector_ip: null, // No collector for on-prem
+          collector_ip_address: null, // No collector for on-prem
+          port: project.port ? project.port.port : null, // Return actual port value instead of ID
           package_name: project.packages.name,
-          port: project.port_id,
           log_quota: project.packages.log_count,
           device_count: project.packages.device_count,
           project_end_date: projectEndDate.toISOString()
         }
       };
+
+      console.log('On-prem project data:', responseData);
       
       await createInternalLog({
         message: 'On-prem project activated successfully',
@@ -529,7 +536,6 @@ export async function POST(request) {
         related_table_id: project.id,
         additional_data: {
           project_id: project.id,
-          collector_ip: normalizedHostIp,
           logger_ip: normalizedHostIp
         }
       });

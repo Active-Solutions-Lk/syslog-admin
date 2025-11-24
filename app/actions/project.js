@@ -115,34 +115,103 @@ export async function getPackages() {
   }
 }
 
-export async function getAvailablePorts(collectorIp) {
+export async function getAvailablePorts(collectorId) {
   try {
-    // First, get all ports
-    const allPorts = await prisma.ports.findMany({
-      select: {
-        id: true,
-        port: true,
-      },
-    });
+    console.log("Getting available ports for collector:", collectorId);
     
-    // Then, get ports that are already assigned to projects with the same collector IP
-    const usedPorts = await prisma.ports.findMany({
+    // Validate collectorId
+    if (!collectorId) {
+      console.log("No collector ID provided");
+      return {
+        success: true,
+        ports: [],
+        isDefaultCollector: false
+      };
+    }
+    
+    // First, get the collector to check if it's a "default" collector
+    const collector = await prisma.collectors.findUnique({
       where: {
-        projects: {
-          collector_ip: collectorIp
-        }
+        id: parseInt(collectorId)
       },
       select: {
         id: true,
-        port: true,
-      },
+        name: true,
+        is_active: true
+      }
     });
     
-    // Create a set of used port IDs for quick lookup
-    const usedPortIds = new Set(usedPorts.map(p => p.id));
+    console.log("Collector info:", collector);
+
+    // Check if collector exists
+    if (!collector) {
+      console.log("Collector not found");
+      return {
+        success: true,
+        ports: [],
+        isDefaultCollector: false
+      };
+    }
+
+    // Check if this is a "default" collector
+    // For now, we'll consider collectors with ID 1 or named "default" as default collectors
+    // Also consider collectors that are inactive as default (to allow any port assignment)
+    const isDefaultCollector = collector && (collector.id === 1 || 
+      collector.name.toLowerCase().includes('default') ||
+      !collector.is_active);
     
-    // Filter out used ports to get available ports
-    const availablePorts = allPorts.filter(port => !usedPortIds.has(port.id));
+    console.log("Is default collector:", isDefaultCollector);
+
+    let availablePorts = [];
+    
+    if (isDefaultCollector) {
+      // For default collectors, all ports are available
+      console.log("Fetching all ports for default collector");
+      const allPorts = await prisma.ports.findMany({
+        select: {
+          id: true,
+          port: true,
+        },
+      });
+      availablePorts = allPorts;
+      console.log("All ports count:", allPorts.length);
+    } else {
+      // For non-default collectors, only get ports that are not assigned to other projects with the same collector
+      console.log("Fetching available ports for non-default collector");
+      
+      // First, get all ports
+      const allPorts = await prisma.ports.findMany({
+        select: {
+          id: true,
+          port: true,
+        },
+      });
+      console.log("All ports count:", allPorts.length);
+      
+      // Then, get ports that are already assigned to projects with the same collector ID
+      const usedPorts = await prisma.ports.findMany({
+        where: {
+          projects: {
+            some: {
+              collector_ip: parseInt(collectorId)
+            }
+          }
+        },
+        select: {
+          id: true,
+          port: true,
+        },
+      });
+      
+      console.log("Used ports count:", usedPorts.length);
+      
+      // Create a set of used port IDs for quick lookup
+      const usedPortIds = new Set(usedPorts.map(p => p.id));
+      
+      // Filter out used ports to get available ports
+      availablePorts = allPorts.filter(port => !usedPortIds.has(port.id));
+      console.log("Available ports count:", availablePorts.length);
+    }
     
     // Convert ids to strings for frontend
     const formattedPorts = availablePorts.map(port => ({
@@ -150,15 +219,18 @@ export async function getAvailablePorts(collectorIp) {
       id: port.id.toString(),
     }));
     
+    console.log("Formatted ports count:", formattedPorts.length);
+    
     return {
       success: true,
       ports: formattedPorts,
+      isDefaultCollector: isDefaultCollector // Return this info to frontend
     };
   } catch (error) {
     console.error('Error fetching available ports:', error);
     return {
       success: false,
-      error: 'Failed to fetch available ports',
+      error: 'Failed to fetch available ports: ' + error.message,
     };
   } finally {
     await prisma.$disconnect();
@@ -171,7 +243,6 @@ export async function getProjects() {
       select: {
         id: true,
         activation_key: true,
-        // secret_key is intentionally excluded from the response
         collector_ip: true,
         logger_ip: true,
         pkg_id: true,
@@ -179,7 +250,7 @@ export async function getProjects() {
         reseller_id: true,
         port_id: true,
         end_customer_id: true,
-        type: true, // Add type to select
+        type: true,
         status: true,
         created_at: true,
         updated_at: true,
@@ -187,6 +258,11 @@ export async function getProjects() {
           select: {
             name: true,
             email: true,
+          }
+        },
+        collector: { // Add collector relation
+          select: {
+            name: true,
           }
         },
         reseller: {
@@ -209,7 +285,7 @@ export async function getProjects() {
             port: true,
           }
         },
-        project_type: { // Add project_type relation
+        project_type: {
           select: {
             name: true,
           }
@@ -226,9 +302,10 @@ export async function getProjects() {
       reseller_id: project.reseller_id ? project.reseller_id.toString() : null,
       port_id: project.port_id ? project.port_id.toString() : null,
       end_customer_id: project.end_customer_id ? project.end_customer_id.toString() : null,
-      type: project.type.toString(), // Convert type to string
+      collector_ip: project.collector_ip ? project.collector_ip.toString() : null, // Convert to string
+      type: project.type.toString(),
       port: project.port ? { port: project.port.port } : null,
-      project_type: project.project_type ? { name: project.project_type.name } : null, // Add project_type
+      project_type: project.project_type ? { name: project.project_type.name } : null,
     }));
     
     return {
@@ -255,7 +332,6 @@ export async function getProjectById(id) {
       select: {
         id: true,
         activation_key: true,
-        // secret_key is intentionally excluded from the response
         collector_ip: true,
         logger_ip: true,
         pkg_id: true,
@@ -263,7 +339,7 @@ export async function getProjectById(id) {
         reseller_id: true,
         port_id: true,
         end_customer_id: true,
-        type: true, // Add type to select
+        type: true,
         status: true,
         created_at: true,
         updated_at: true,
@@ -271,6 +347,11 @@ export async function getProjectById(id) {
           select: {
             name: true,
             email: true,
+          }
+        },
+        collector: { // Add collector relation
+          select: {
+            name: true,
           }
         },
         reseller: {
@@ -293,7 +374,7 @@ export async function getProjectById(id) {
             port: true,
           }
         },
-        project_type: { // Add project_type relation
+        project_type: {
           select: {
             name: true,
           }
@@ -317,10 +398,11 @@ export async function getProjectById(id) {
       reseller_id: project.reseller_id ? project.reseller_id.toString() : null,
       port_id: project.port_id ? project.port_id.toString() : null,
       end_customer_id: project.end_customer_id ? project.end_customer_id.toString() : null,
-      type: project.type.toString(), // Convert type to string
+      collector_ip: project.collector_ip ? project.collector_ip.toString() : null, // Convert to string
+      type: project.type.toString(),
       status: project.status,
       port: project.port ? { port: project.port.port } : null,
-      project_type: project.project_type ? { name: project.project_type.name } : null, // Add project_type
+      project_type: project.project_type ? { name: project.project_type.name } : null,
     };
     
     return {
@@ -346,23 +428,43 @@ export async function createProject({
   reseller_id, 
   port_id, 
   end_customer_id,
-  type // Add type parameter
+  type
 }) {
   try {
-    // If a port is being assigned, check if it's already used by another project with the same collector IP
+    // If a port is being assigned, check if it's already used by another project with the same collector
     if (port_id && collector_ip) {
-      const existingProject = await prisma.projects.findFirst({
+      // First, check if this is a default collector
+      const collector = await prisma.collectors.findUnique({
         where: {
-          collector_ip: collector_ip,
-          port_id: parseInt(port_id)
+          id: parseInt(collector_ip)
+        },
+        select: {
+          id: true,
+          name: true,
+          is_active: true
         }
       });
       
-      if (existingProject) {
-        return {
-          success: false,
-          error: `Port is already assigned to project ${existingProject.activation_key} with the same collector IP`
-        };
+      // Check if this is a "default" collector
+      const isDefaultCollector = collector && (collector.id === 1 || 
+        collector.name.toLowerCase().includes('default') ||
+        !collector.is_active);
+      
+      // For non-default collectors, verify port is not already assigned to another project with the same collector
+      if (!isDefaultCollector) {
+        const existingProject = await prisma.projects.findFirst({
+          where: {
+            collector_ip: parseInt(collector_ip),
+            port_id: parseInt(port_id)
+          }
+        });
+        
+        if (existingProject) {
+          return {
+            success: false,
+            error: `Port is already assigned to project ${existingProject.activation_key} with the same collector`
+          };
+        }
       }
     }
     
@@ -380,15 +482,15 @@ export async function createProject({
       data: {
         activation_key,
         secret_key,
-        collector_ip: collector_ip || '',
+        collector_ip: collector_ip ? parseInt(collector_ip) : null,
         logger_ip: logger_ip || '',
-        pkg_id: pkg_id && pkg_id !== '' ? parseInt(pkg_id) : 1, // Default to package ID 1 if not provided
+        pkg_id: pkg_id && pkg_id !== '' ? parseInt(pkg_id) : 1,
         admin_id: admin_id ? parseInt(admin_id) : null,
         reseller_id: reseller_id ? parseInt(reseller_id) : null,
         port_id: port_id ? parseInt(port_id) : null,
         end_customer_id: end_customer_id ? parseInt(end_customer_id) : null,
-        type: type ? parseInt(type) : 1, // Default to type 1 if not provided
-        status: true, // Default to enabled
+        type: type ? parseInt(type) : 1,
+        status: true,
         created_at: now,
         updated_at: now,
       },
@@ -403,7 +505,7 @@ export async function createProject({
         reseller_id: true,
         port_id: true,
         end_customer_id: true,
-        type: true, // Add type to select
+        type: true,
         status: true,
         created_at: true,
         updated_at: true,
@@ -411,6 +513,11 @@ export async function createProject({
           select: {
             name: true,
             email: true,
+          }
+        },
+        collector: {
+          select: {
+            name: true,
           }
         },
         reseller: {
@@ -433,7 +540,7 @@ export async function createProject({
             port: true,
           }
         },
-        project_type: { // Add project_type relation
+        project_type: {
           select: {
             name: true,
           }
@@ -450,7 +557,8 @@ export async function createProject({
       reseller_id: project.reseller_id ? project.reseller_id.toString() : null,
       port_id: project.port_id ? project.port_id.toString() : null,
       end_customer_id: project.end_customer_id ? project.end_customer_id.toString() : null,
-      type: project.type.toString(), // Convert type to string
+      collector_ip: project.collector_ip ? project.collector_ip.toString() : null,
+      type: project.type.toString(),
       status: project.status,
     };
     
@@ -480,27 +588,47 @@ export async function updateProject({
   reseller_id, 
   port_id, 
   end_customer_id,
-  type, // Add type parameter
+  type,
   status
 }) {
   try {
-    // If a port is being assigned, check if it's already used by another project with the same collector IP
+    // If a port is being assigned, check if it's already used by another project with the same collector
     if (port_id && collector_ip) {
-      const existingProject = await prisma.projects.findFirst({
+      // First, check if this is a default collector
+      const collector = await prisma.collectors.findUnique({
         where: {
-          collector_ip: collector_ip,
-          port_id: parseInt(port_id),
-          NOT: {
-            id: parseInt(id)
-          }
+          id: parseInt(collector_ip)
+        },
+        select: {
+          id: true,
+          name: true,
+          is_active: true
         }
       });
       
-      if (existingProject) {
-        return {
-          success: false,
-          error: `Port is already assigned to project ${existingProject.activation_key} with the same collector IP`
-        };
+      // Check if this is a "default" collector
+      const isDefaultCollector = collector && (collector.id === 1 || 
+        collector.name.toLowerCase().includes('default') ||
+        !collector.is_active);
+      
+      // For non-default collectors, verify port is not already assigned to another project with the same collector
+      if (!isDefaultCollector) {
+        const existingProject = await prisma.projects.findFirst({
+          where: {
+            collector_ip: parseInt(collector_ip),
+            port_id: parseInt(port_id),
+            NOT: {
+              id: parseInt(id)
+            }
+          }
+        });
+        
+        if (existingProject) {
+          return {
+            success: false,
+            error: `Port is already assigned to project ${existingProject.activation_key} with the same collector`
+          };
+        }
       }
     }
     
@@ -514,21 +642,20 @@ export async function updateProject({
       },
       data: {
         activation_key,
-        collector_ip: collector_ip || '',
+        collector_ip: collector_ip ? parseInt(collector_ip) : null,
         logger_ip: logger_ip || '',
-        pkg_id: pkg_id && pkg_id !== '' ? parseInt(pkg_id) : 1, // Default to package ID 1 if not provided
+        pkg_id: pkg_id && pkg_id !== '' ? parseInt(pkg_id) : 1,
         admin_id: admin_id ? parseInt(admin_id) : null,
         reseller_id: reseller_id ? parseInt(reseller_id) : null,
         port_id: port_id ? parseInt(port_id) : null,
         end_customer_id: end_customer_id ? parseInt(end_customer_id) : null,
-        type: type ? parseInt(type) : undefined, // Only update type if provided
-        status: status !== undefined ? status : undefined, // Only update status if provided
+        type: type ? parseInt(type) : undefined,
+        status: status !== undefined ? status : undefined,
         updated_at: now,
       },
       select: {
         id: true,
         activation_key: true,
-        // secret_key is intentionally not updated and excluded from the response
         collector_ip: true,
         logger_ip: true,
         pkg_id: true,
@@ -536,7 +663,7 @@ export async function updateProject({
         reseller_id: true,
         port_id: true,
         end_customer_id: true,
-        type: true, // Add type to select
+        type: true,
         status: true,
         created_at: true,
         updated_at: true,
@@ -544,6 +671,11 @@ export async function updateProject({
           select: {
             name: true,
             email: true,
+          }
+        },
+        collector: {
+          select: {
+            name: true,
           }
         },
         reseller: {
@@ -566,7 +698,7 @@ export async function updateProject({
             port: true,
           }
         },
-        project_type: { // Add project_type relation
+        project_type: {
           select: {
             name: true,
           }
@@ -583,7 +715,8 @@ export async function updateProject({
       reseller_id: project.reseller_id ? project.reseller_id.toString() : null,
       port_id: project.port_id ? project.port_id.toString() : null,
       end_customer_id: project.end_customer_id ? project.end_customer_id.toString() : null,
-      type: project.type.toString(), // Convert type to string
+      collector_ip: project.collector_ip ? project.collector_ip.toString() : null,
+      type: project.type.toString(),
       status: project.status,
     };
     
@@ -623,7 +756,6 @@ export async function updateProjectStatus(id, status) {
       select: {
         id: true,
         activation_key: true,
-        // secret_key is intentionally excluded from the response
         collector_ip: true,
         logger_ip: true,
         pkg_id: true,
