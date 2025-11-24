@@ -7,10 +7,10 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { useState, useEffect, useMemo } from "react";
+// import { Label } from "@/components/ui/label";
+import React, { useState, useEffect, useMemo } from "react";
 import { getProjects, createProject, updateProject, deleteProject, updateProjectStatus } from "@/app/actions/project";
 import { CellContext } from "@tanstack/react-table";
 
@@ -151,7 +151,7 @@ export function ProjectManagement() {
     // In a real app, this would navigate to a detailed view
   };
 
-  const handleStatusChange = async (project: Project, newStatus: boolean) => {
+  const handleStatusChange = React.useCallback(async (project: Project, newStatus: boolean) => {
     if (!project.id) return;
     
     try {
@@ -168,7 +168,7 @@ export function ProjectManagement() {
       console.error('Error updating project status:', error);
       alert('Error updating project status');
     }
-  };
+  }, [projects, setProjects]);
 
   // Define columns for the data table using useMemo to prevent re-creation on every render
   const columns = useMemo(() => [

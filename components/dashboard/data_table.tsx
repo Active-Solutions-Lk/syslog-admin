@@ -70,15 +70,15 @@ export function DataTable<TData, TValue>({
   const filteredData = React.useMemo(() => {
     if (!searchValue) return data;
     
-    return data.filter((row: any) => {
+    return data.filter((row) => {
       // Check all columns for the search value
-      return Object.values(row).some((value: any) => {
+      return Object.values(row as Record<string, unknown>).some((value: unknown) => {
         if (value === null || value === undefined) return false;
         
         // Handle nested objects
         if (typeof value === 'object') {
           // Recursively check nested object properties
-          return Object.values(value).some((nestedValue: any) => {
+          return Object.values(value as Record<string, unknown>).some((nestedValue: unknown) => {
             if (nestedValue === null || nestedValue === undefined) return false;
             return nestedValue.toString().toLowerCase().includes(searchValue.toLowerCase());
           });

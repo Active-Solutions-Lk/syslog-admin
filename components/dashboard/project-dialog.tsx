@@ -257,7 +257,7 @@ export function ProjectDialog({
     };
     
     fetchPorts();
-  }, [open, collector_ip]);
+  }, [open, collector_ip, project]);
 
   // Helper function to fetch available ports
   const fetchAvailablePortsForCollector = async (
