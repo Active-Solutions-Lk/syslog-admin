@@ -96,7 +96,7 @@ export function PortManagement() {
         if (result.success) {
           // For each port, fetch the projects that use it
           const portsWithData = await Promise.all(
-            (result.ports || []).map(async (port) => {
+            (result.ports || []).map(async (port: PortFromServer) => {
               const projectsResult = await getProjectsUsingPort(port.id!);
               return {
                 ...port,
