@@ -79,6 +79,44 @@ interface Project {
   } | null;
 }
 
+// Interfaces for dropdown options
+interface PackageOption {
+  id: string;
+  name: string;
+}
+
+interface AdminOption {
+  id: string;
+  name: string | null;
+  email: string;
+}
+
+interface ResellerOption {
+  customer_id: string;
+  company_name: string;
+}
+
+interface EndCustomerOption {
+  id: string;
+  company: string | null;
+}
+
+interface ProjectTypeOption {
+  id: string;
+  name: string | null;
+}
+
+interface CollectorOption {
+  id: string;
+  name: string | null;
+  ip: string | null;
+}
+
+interface PortOption {
+  id: string;
+  port: number;
+}
+
 interface ProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -132,7 +170,7 @@ export function ProjectDialog({
           // Fetch packages
           const packagesResult = await getPackages();
           if (packagesResult.success && packagesResult.packages) {
-            const packageOptions = packagesResult.packages.map((pkg) => ({
+            const packageOptions = packagesResult.packages.map((pkg: PackageOption) => ({
               value: pkg.id,
               label: pkg.name,
             }));
@@ -142,7 +180,7 @@ export function ProjectDialog({
           // Fetch admins
           const adminsResult = await getAdmins();
           if (adminsResult.success && adminsResult.admins) {
-            const adminOptions = adminsResult.admins.map((admin) => ({
+            const adminOptions = adminsResult.admins.map((admin: AdminOption) => ({
               value: admin.id,
               label: admin.name || admin.email,
             }));
@@ -153,7 +191,7 @@ export function ProjectDialog({
           const resellersResult = await getResellers();
           if (resellersResult.success && resellersResult.resellers) {
             const resellerOptions = resellersResult.resellers.map(
-              (reseller) => ({
+              (reseller: ResellerOption) => ({
                 value: reseller.customer_id,
                 label: reseller.company_name,
               })
@@ -165,7 +203,7 @@ export function ProjectDialog({
           const endCustomersResult = await getEndCustomers();
           if (endCustomersResult.success && endCustomersResult.endCustomers) {
             const endCustomerOptions = endCustomersResult.endCustomers.map(
-              (endCustomer) => ({
+              (endCustomer: EndCustomerOption) => ({
                 value: endCustomer.id,
                 label: endCustomer.company || "N/A",
               })
@@ -177,7 +215,7 @@ export function ProjectDialog({
           const projectTypesResult = await getProjectTypes();
           if (projectTypesResult.success && projectTypesResult.projectTypes) {
             const projectTypeOptions = projectTypesResult.projectTypes.map(
-              (type) => ({
+              (type: ProjectTypeOption) => ({
                 value: type.id,
                 label: type.name || "N/A",
               })
@@ -189,7 +227,7 @@ export function ProjectDialog({
           const collectorsResult = await getCollectors();
           if (collectorsResult.success && collectorsResult.collectors) {
             const collectorOptions = collectorsResult.collectors.map(
-              (collector) => ({
+              (collector: CollectorOption) => ({
                 value: collector.id,
                 label: collector.name || collector.ip || "N/A",
               })
@@ -284,7 +322,7 @@ export function ProjectDialog({
       let portOptions: { value: string; label: string }[] = [];
 
       if (portsResult.success && portsResult.ports) {
-        portOptions = portsResult.ports.map((port) => ({
+        portOptions = portsResult.ports.map((port: PortOption) => ({
           value: port.id,
           label: `Port ${port.port}`,
         }));
