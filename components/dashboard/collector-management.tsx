@@ -108,7 +108,7 @@ export function CollectorManagement() {
         if (result.success) {
           // For each collector, fetch the projects that use it
           const collectorsWithData = await Promise.all(
-            (result.collectors || []).map(async (collector) => {
+            (result.collectors || []).map(async (collector: CollectorFromServer) => {
               const projectsResult = await getProjectsUsingCollector(collector.id!);
               return {
                 ...collector,
