@@ -61,7 +61,7 @@ export async function Login({ userName, password }) {
 
     // Create session token
     const token = await createToken({
-      id: admin.id,
+      id: admin.id.toString(), // Convert to string to match session storage
       email: admin.email,
       role: admin.role
     });
@@ -72,8 +72,9 @@ export async function Login({ userName, password }) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       maxAge: 60 * 60 * 24, // 24 hours
-      path: '/',
-      sameSite: 'strict',
+      path: '/', // Make sure it's available site-wide
+      sameSite: 'lax',
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined, // Don't set domain in development
     });
 
     // Create session in database
@@ -103,6 +104,7 @@ export async function Login({ userName, password }) {
     
     console.log('Created session in database:', createdSession);
 
+    // Return success response with cookie information
     return {
       success: true,
       message: 'Login successful',
@@ -112,6 +114,8 @@ export async function Login({ userName, password }) {
         name: admin.name,
         role: admin.role
       },
+      // Include token in response for debugging
+      token: token
     };
   } catch (error) {
     console.error('Login action error:', error);

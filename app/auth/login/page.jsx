@@ -1,24 +1,40 @@
 "use client"
 
 import LoginForm from "@/components/auth/login-form"
-import { Login } from "@/app/actions/auth"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useTransition } from "react"
 
 export default function Page() {
   const [loginError, setLoginError] = useState(null);
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const handleLogin = async (data) => {
     try {
       setLoginError(null);
-      const result = await Login({ userName: data.username, password: data.password });
+      
+      // Call the API route instead of the Server Action
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: data.username,
+          password: data.password,
+        }),
+      });
+      
+      const result = await response.json();
       
       if (result.success) {
         console.log("Login successful:", result);
-        // Redirect to dashboard after successful login
-        router.push('/dashboard');
-        router.refresh();
+        // Use startTransition to ensure the cookie is properly set before redirecting
+        startTransition(() => {
+          router.push('/dashboard');
+          router.refresh();
+        });
         return result;
       } else {
         // Set the error message from the server
@@ -47,6 +63,11 @@ export default function Page() {
         {loginError && (
           <div className="mt-4 p-3 text-center text-sm text-red-500 bg-red-50 rounded-md">
             {loginError}
+          </div>
+        )}
+        {isPending && (
+          <div className="mt-4 p-3 text-center text-sm text-blue-500 bg-blue-50 rounded-md">
+            Redirecting to dashboard...
           </div>
         )}
       </div>

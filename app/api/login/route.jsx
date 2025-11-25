@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
+import { SignJWT } from 'jose';
 
 const prisma = new PrismaClient({
   datasources: {
@@ -9,6 +10,25 @@ const prisma = new PrismaClient({
     },
   },
 });
+
+// Generate JWT secret
+async function getJwtSecret() {
+  const secret = process.env.JWT_SECRET || 'fallback_secret_key';
+  return new TextEncoder().encode(secret);
+}
+
+// Create JWT token
+async function createToken(payload) {
+  const secret = await getJwtSecret();
+  const iat = Math.floor(Date.now() / 1000);
+  const exp = iat + 60 * 60 * 24; // 24 hours
+
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt(iat)
+    .setExpirationTime(exp)
+    .sign(secret);
+}
 
 export async function POST(request) {
   try {
@@ -65,17 +85,62 @@ export async function POST(request) {
       );
     }
 
-    // Return success response (in a real app, you would generate a session token here)
-    return NextResponse.json({
+    // Create session token
+    const token = await createToken({
+      id: admin.id.toString(), // Convert to string to match session storage
+      email: admin.email,
+      role: admin.role
+    });
+
+    // Create session in database
+    const sessionId = `session_${admin.id}_${Date.now()}`;
+    const now = new Date();
+    const sessionData = {
+      id: sessionId,
+      userId: admin.id.toString(),
+      sessionToken: token,
+      expires: new Date(Date.now() + 60 * 60 * 24 * 1000), // 24 hours
+      createdAt: now,
+      updatedAt: now,
+    };
+    
+    console.log('Creating session with data:', sessionData);
+    
+    await prisma.session.create({
+      data: sessionData
+    });
+    
+    // Verify session was created
+    const createdSession = await prisma.session.findUnique({
+      where: {
+        sessionToken: token
+      }
+    });
+    
+    console.log('Created session in database:', createdSession);
+
+    // Create response with Set-Cookie header
+    const response = NextResponse.json({
       success: true,
       message: 'Login successful',
       admin: {
         id: admin.id,
         name: admin.name,
         email: admin.email,
+        role: admin.role
       },
     });
 
+    // Set the auth cookie
+    response.cookies.set('auth-token', token, {
+      httpOnly: true,
+      secure: false, // Force to false for development
+      maxAge: 60 * 60 * 24, // 24 hours
+      path: '/',
+      sameSite: 'lax',
+    });
+
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     // For any other unexpected errors, return a generic message to avoid exposing system details

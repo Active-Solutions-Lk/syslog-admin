@@ -87,7 +87,7 @@ export async function getCurrentUser() {
     
     return { 
       user: {
-        id: (payload as JWTPayload).id,
+        id: (payload as JWTPayload).id.toString(), // Ensure ID is string
         email: (payload as JWTPayload).email,
         role: (payload as JWTPayload).role
       }, 
