@@ -15,16 +15,16 @@ async function main() {
   // Create sample project types
   const projectTypeData = [
     {
-      name: 'Web Application',
+      name: 'Web App',
     },
     {
-      name: 'Mobile App',
+      name: 'Mobile',
     },
     {
-      name: 'IoT Device',
+      name: 'IoT',
     },
     {
-      name: 'Server Infrastructure',
+      name: 'Server',
     },
   ];
 
@@ -332,7 +332,7 @@ async function main() {
       reseller_id: resellers[0].customer_id,
       end_customer_id: endCustomers[0].id,
       status: true,
-      type: 1, // Will be updated later with actual project type
+      type: projectTypes[0].id, // Use actual project type ID
       collector_id: collectors[0].id, // Reference to collector by ID
     },
     {
@@ -345,7 +345,7 @@ async function main() {
       reseller_id: resellers[1].customer_id,
       end_customer_id: endCustomers[1].id,
       status: true,
-      type: 2, // Will be updated later with actual project type
+      type: projectTypes[1].id, // Use actual project type ID
       collector_id: collectors[1].id, // Reference to collector by ID
     },
     {
@@ -356,7 +356,7 @@ async function main() {
       pkg_id: packages[2].id,
       admin_id: admins[2].id,
       status: true,
-      type: 3, // Will be updated later with actual project type
+      type: projectTypes[2].id, // Use actual project type ID
       collector_id: collectors[2].id, // Reference to collector by ID
     },
   ];
