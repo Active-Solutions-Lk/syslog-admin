@@ -92,8 +92,11 @@ export async function POST(request) {
       role: admin.role
     });
 
+    console.log('Created token:', token);
+
     // Create session in database
     const sessionId = `session_${admin.id}_${Date.now()}`;
+    console.log('Creating session with ID:', sessionId);
     const now = new Date();
     const sessionData = {
       id: sessionId,
@@ -129,16 +132,29 @@ export async function POST(request) {
         email: admin.email,
         role: admin.role
       },
+      // Include token in response for debugging
+      token: token
     });
 
-    // Set the auth cookie
+    // Set the auth cookie with proper attributes for both dev and prod
+    // In local development and production, don't require secure cookies unless explicitly on HTTPS
+    const isSecure = process.env.NODE_ENV === 'production' && 
+                     process.env.VERCEL === '1';  // Only secure on Vercel
+    
     response.cookies.set('auth-token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       maxAge: 60 * 60 * 24, // 24 hours
       path: '/',
       sameSite: 'lax',
+      domain: undefined
     });
+    
+    // Log the cookie being set for debugging
+    console.log('Setting auth-token cookie:', token);
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    console.log('VERCEL:', process.env.VERCEL);
+    console.log('Secure setting:', isSecure);
 
     return response;
   } catch (error) {

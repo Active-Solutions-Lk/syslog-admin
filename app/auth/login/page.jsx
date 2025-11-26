@@ -30,7 +30,9 @@ export default function Page() {
       
       if (result.success) {
         console.log("Login successful:", result);
-        // Use startTransition to ensure the cookie is properly set before redirecting
+        // Wait a short time to ensure the cookie is set before redirecting
+        await new Promise(resolve => setTimeout(resolve, 100));
+        // Use startTransition for the redirect
         startTransition(() => {
           router.push('/dashboard');
           router.refresh();
