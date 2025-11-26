@@ -461,6 +461,7 @@ export async function POST(request) {
           company_name: companyName,
           collector_ip: project.collector ? project.collector.ip : null, // Return collector IP address instead of ID
           collector_ip_address: project.collector ? project.collector.ip : null,
+          collector_secret: project.collector ? project.collector.secret_key : null,
           port: project.port ? project.port.port : null, // Return actual port value instead of ID
           package_name: project.packages.name,
           log_quota: project.packages.log_count,

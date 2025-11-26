@@ -31,21 +31,19 @@ async function verifyJWT(token: string) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  console.log('Middleware - Pathname:', pathname);
+  console.log('Pathname:', pathname);
   
   // If it's not a protected route, continue
   if (!isProtectedRoute(pathname)) {
-    console.log('Middleware - Not a protected route, continuing');
     return NextResponse.next();
   }
   
   // Get token from cookies
   const token = request.cookies.get('auth-token')?.value;
-  console.log('Middleware - Token from cookie:', token);
+  console.log('Token:', token);
   
   // If no token, redirect to login
   if (!token) {
-    console.log('Middleware - No token found, redirecting to login');
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
@@ -53,17 +51,15 @@ export async function middleware(request: NextRequest) {
   
   // Verify token
   const payload = await verifyJWT(token);
-  console.log('Middleware - Token Payload:', payload);
+  console.log('Token Payload:', payload);
   if (!payload) {
     // Token invalid, redirect to login
-    console.log('Middleware - Invalid token, redirecting to login');
     const loginUrl = new URL('/auth/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
   
   // Token is valid, continue
-  console.log('Middleware - Token is valid, allowing access');
   return NextResponse.next();
 }
 
