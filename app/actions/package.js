@@ -18,9 +18,9 @@ export async function getPackages() {
         id: true,
         name: true,
         log_count: true,
-        duration: true,
+        log_duration: true,
+        project_duration: true,
         device_count: true,
-        log_analyce: true,
         created_at: true,
         updated_at: true,
       },
@@ -58,9 +58,9 @@ export async function getPackageById(id) {
         id: true,
         name: true,
         log_count: true,
-        duration: true,
+        log_duration: true,
+        project_duration: true,
         device_count: true,
-        log_analyce: true,
         created_at: true,
         updated_at: true,
       },
@@ -98,9 +98,9 @@ export async function getPackageById(id) {
 export async function createPackage({ 
   name, 
   log_count, 
-  duration, 
-  device_count, 
-  log_analyce 
+  log_duration,
+  project_duration,
+  device_count
 }) {
   try {
     // Get current date for timestamps
@@ -111,9 +111,9 @@ export async function createPackage({
       data: {
         name,
         log_count: parseInt(log_count) || 0,
-        duration: parseFloat(duration) || 0,
+        log_duration,
+        project_duration,
         device_count: parseInt(device_count) || 0,
-        log_analyce: parseInt(log_analyce) || 0,
         created_at: now,
         updated_at: now,
       },
@@ -121,9 +121,9 @@ export async function createPackage({
         id: true,
         name: true,
         log_count: true,
-        duration: true,
+        log_duration: true,
+        project_duration: true,
         device_count: true,
-        log_analyce: true,
         created_at: true,
         updated_at: true,
       },
@@ -156,9 +156,9 @@ export async function updatePackage({
   id, 
   name, 
   log_count, 
-  duration, 
-  device_count, 
-  log_analyce 
+  log_duration,
+  project_duration,
+  device_count
 }) {
   try {
     // Get current date for updatedAt timestamp
@@ -172,18 +172,18 @@ export async function updatePackage({
       data: {
         name,
         log_count: parseInt(log_count) || 0,
-        duration: parseFloat(duration) || 0,
+        log_duration,
+        project_duration,
         device_count: parseInt(device_count) || 0,
-        log_analyce: parseInt(log_analyce) || 0,
         updated_at: now,
       },
       select: {
         id: true,
         name: true,
         log_count: true,
-        duration: true,
+        log_duration: true,
+        project_duration: true,
         device_count: true,
-        log_analyce: true,
         created_at: true,
         updated_at: true,
       },

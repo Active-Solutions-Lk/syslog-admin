@@ -19,9 +19,9 @@ interface Package {
   id?: string;
   name: string;
   log_count: number;
-  duration: number;
+  log_duration: string;
+  project_duration: string;
   device_count: number;
-  log_analyce: number;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -36,9 +36,9 @@ interface PackageDialogProps {
 export function PackageDialog({ open, onOpenChange, package: pkg, onSave }: PackageDialogProps) {
   const [name, setName] = useState("");
   const [log_count, setLogCount] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [log_duration, setLogDuration] = useState("");
+  const [project_duration, setProjectDuration] = useState("");
   const [device_count, setDeviceCount] = useState(0);
-  const [log_analyce, setLogAnalyze] = useState(0);
 
   // Reset form when dialog opens or package changes
   useEffect(() => {
@@ -46,15 +46,15 @@ export function PackageDialog({ open, onOpenChange, package: pkg, onSave }: Pack
       if (pkg) {
         setName(pkg.name || "");
         setLogCount(pkg.log_count || 0);
-        setDuration(pkg.duration || 0);
+        setLogDuration(pkg.log_duration || "");
+        setProjectDuration(pkg.project_duration || "");
         setDeviceCount(pkg.device_count || 0);
-        setLogAnalyze(pkg.log_analyce || 0);
       } else {
         setName("");
         setLogCount(0);
-        setDuration(0);
+        setLogDuration("");
+        setProjectDuration("");
         setDeviceCount(0);
-        setLogAnalyze(0);
       }
     }
   }, [open, pkg]);
@@ -65,9 +65,9 @@ export function PackageDialog({ open, onOpenChange, package: pkg, onSave }: Pack
     const packageData: Package = {
       name,
       log_count,
-      duration,
+      log_duration,
+      project_duration,
       device_count,
-      log_analyce,
     };
     
     if (pkg?.id) {
@@ -116,15 +116,25 @@ export function PackageDialog({ open, onOpenChange, package: pkg, onSave }: Pack
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="duration" className="text-right">
-                Duration
+              <Label htmlFor="log_duration" className="text-right">
+                Log Duration
               </Label>
               <Input
-                id="duration"
-                type="number"
-                step="0.1"
-                value={duration}
-                onChange={(e) => setDuration(parseFloat(e.target.value) || 0)}
+                id="log_duration"
+                value={log_duration}
+                onChange={(e) => setLogDuration(e.target.value)}
+                className="col-span-3"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="project_duration" className="text-right">
+                Project Duration
+              </Label>
+              <Input
+                id="project_duration"
+                value={project_duration}
+                onChange={(e) => setProjectDuration(e.target.value)}
                 className="col-span-3"
                 required
               />
@@ -138,19 +148,6 @@ export function PackageDialog({ open, onOpenChange, package: pkg, onSave }: Pack
                 type="number"
                 value={device_count}
                 onChange={(e) => setDeviceCount(parseInt(e.target.value) || 0)}
-                className="col-span-3"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="log_analyce" className="text-right">
-                Log Analyze
-              </Label>
-              <Input
-                id="log_analyce"
-                type="number"
-                value={log_analyce}
-                onChange={(e) => setLogAnalyze(parseInt(e.target.value) || 0)}
                 className="col-span-3"
                 required
               />

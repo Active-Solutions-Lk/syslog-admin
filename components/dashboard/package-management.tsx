@@ -2,6 +2,7 @@
 
 import { DataTable } from "@/components/dashboard/data_table";
 import { PackageDialog } from "@/components/dashboard/package-dialog";
+import { PackageAdvancedView } from "@/components/dashboard/package-advanced-view";
 import {
   Avatar,
   AvatarFallback,
@@ -17,9 +18,9 @@ interface PackageFromServer {
   id: string;
   name: string;
   log_count: number;
-  duration: number;
+  log_duration: string;
+  project_duration: string;
   device_count: number;
-  log_analyce: number;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -28,9 +29,9 @@ interface Package {
   id?: string;
   name: string;
   log_count: number;
-  duration: number;
+  log_duration: string;
+  project_duration: string;
   device_count: number;
-  log_analyce: number;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -55,16 +56,16 @@ const columns = [
     header: "Log Count",
   },
   {
-    accessorKey: "duration",
-    header: "Duration",
+    accessorKey: "log_duration",
+    header: "Log Duration",
+  },
+  {
+    accessorKey: "project_duration",
+    header: "Project Duration",
   },
   {
     accessorKey: "device_count",
     header: "Device Count",
-  },
-  {
-    accessorKey: "log_analyce",
-    header: "Log Analyze",
   },
   {
     accessorKey: "created_at",
@@ -87,6 +88,8 @@ export function PackageManagement() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
+  const [isAdvancedViewOpen, setIsAdvancedViewOpen] = useState(false);
+  const [viewingPackage, setViewingPackage] = useState<Package | null>(null);
 
   // Fetch packages from server
   useEffect(() => {
@@ -138,8 +141,8 @@ export function PackageManagement() {
   };
 
   const handleAdvancedView = (pkg: Package) => {
-    console.log("Advanced view for:", pkg);
-    // In a real app, this would navigate to a detailed view
+    setViewingPackage(pkg);
+    setIsAdvancedViewOpen(true);
   };
 
   const handleSavePackage = async (pkg: Package) => {
@@ -148,15 +151,15 @@ export function PackageManagement() {
       
       if (pkg.id) {
         // Update existing package
-        const { id, name, log_count, duration, device_count, log_analyce } = pkg;
-        result = await updatePackage({ id, name, log_count, duration, device_count, log_analyce });
+        const { id, name, log_count, log_duration, project_duration, device_count } = pkg;
+        result = await updatePackage({ id, name, log_count, log_duration, project_duration, device_count });
         if (result.success) {
           setPackages(packages.map(p => p.id === pkg.id ? result.package! : p));
         }
       } else {
         // Add new package
-        const { name, log_count, duration, device_count, log_analyce } = pkg;
-        result = await createPackage({ name, log_count, duration, device_count, log_analyce });
+        const { name, log_count, log_duration, project_duration, device_count } = pkg;
+        result = await createPackage({ name, log_count, log_duration, project_duration, device_count });
         if (result.success) {
           setPackages([...packages, result.package!]);
         }
@@ -204,6 +207,14 @@ export function PackageManagement() {
         package={editingPackage || undefined}
         onSave={handleSavePackage}
       />
+      
+      {viewingPackage && (
+        <PackageAdvancedView
+          open={isAdvancedViewOpen}
+          onOpenChange={setIsAdvancedViewOpen}
+          package={viewingPackage}
+        />
+      )}
     </>
   );
 }

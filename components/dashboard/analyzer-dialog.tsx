@@ -14,49 +14,45 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
 
-interface Collector {
+interface Analyzer {
   id?: string;
   name: string;
   ip: string;
   domain: string;
-  secret_key: string;
-  is_active: boolean;
+  status: number;
   created_at?: Date;
   updated_at?: Date;
 }
 
-interface CollectorDialogProps {
+interface AnalyzerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  collector?: Collector;
-  onSave: (collector: Collector) => void;
+  analyzer?: Analyzer;
+  onSave: (analyzer: Analyzer) => void;
 }
 
-export function CollectorDialog({ open, onOpenChange, collector, onSave }: CollectorDialogProps) {
+export function AnalyzerDialog({ open, onOpenChange, analyzer, onSave }: AnalyzerDialogProps) {
   const [name, setName] = useState<string>("");
   const [ip, setIp] = useState<string>("");
   const [domain, setDomain] = useState<string>("");
-  const [secretKey, setSecretKey] = useState<string>("");
-  const [isActive, setIsActive] = useState<boolean>(true);
+  const [status, setStatus] = useState<number>(1);
 
-  // Reset form when dialog opens or collector changes
+  // Reset form when dialog opens or analyzer changes
   useEffect(() => {
     if (open) {
-      if (collector) {
-        setName(collector.name || "");
-        setIp(collector.ip || "");
-        setDomain(collector.domain || "");
-        setSecretKey(collector.secret_key || "");
-        setIsActive(collector.is_active ?? true);
+      if (analyzer) {
+        setName(analyzer.name || "");
+        setIp(analyzer.ip || "");
+        setDomain(analyzer.domain || "");
+        setStatus(analyzer.status ?? 1);
       } else {
         setName("");
         setIp("");
         setDomain("");
-        setSecretKey("");
-        setIsActive(true);
+        setStatus(1);
       }
     }
-  }, [open, collector]);
+  }, [open, analyzer]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,24 +67,18 @@ export function CollectorDialog({ open, onOpenChange, collector, onSave }: Colle
       return;
     }
     
-    if (!secretKey.trim()) {
-      alert("Please enter a secret key");
-      return;
-    }
-    
-    const collectorData: Collector = {
+    const analyzerData: Analyzer = {
       name: name.trim(),
       ip: ip.trim(),
       domain: domain.trim(),
-      secret_key: secretKey.trim(),
-      is_active: isActive,
+      status: status,
     };
     
-    if (collector?.id) {
-      collectorData.id = collector.id;
+    if (analyzer?.id) {
+      analyzerData.id = analyzer.id;
     }
     
-    onSave(collectorData);
+    onSave(analyzerData);
   };
 
   return (
@@ -96,11 +86,11 @@ export function CollectorDialog({ open, onOpenChange, collector, onSave }: Colle
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{collector ? "Edit Collector" : "Add Collector"}</DialogTitle>
+            <DialogTitle>{analyzer ? "Edit Analyzer" : "Add Analyzer"}</DialogTitle>
             <DialogDescription>
-              {collector 
-                ? "Make changes to the collector here." 
-                : "Add a new collector here."}
+              {analyzer 
+                ? "Make changes to the analyzer here." 
+                : "Add a new analyzer here."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -142,26 +132,14 @@ export function CollectorDialog({ open, onOpenChange, collector, onSave }: Colle
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="secretKey" className="text-right">
-                Secret Key
-              </Label>
-              <Input
-                id="secretKey"
-                value={secretKey}
-                onChange={(e) => setSecretKey(e.target.value)}
-                className="col-span-3"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="isActive" className="text-right">
+              <Label htmlFor="status" className="text-right">
                 Active
               </Label>
               <div className="col-span-3 flex items-center">
                 <Switch
-                  id="isActive"
-                  checked={isActive}
-                  onCheckedChange={setIsActive}
+                  id="status"
+                  checked={status === 1}
+                  onCheckedChange={(checked) => setStatus(checked ? 1 : 0)}
                 />
               </div>
             </div>
@@ -171,7 +149,7 @@ export function CollectorDialog({ open, onOpenChange, collector, onSave }: Colle
               Cancel
             </Button>
             <Button type="submit">
-              {collector ? "Save Changes" : "Add Collector"}
+              {analyzer ? "Save Changes" : "Add Analyzer"}
             </Button>
           </DialogFooter>
         </form>

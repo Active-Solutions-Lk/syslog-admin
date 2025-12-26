@@ -16,9 +16,11 @@ import { CellContext } from "@tanstack/react-table";
 // Define types
 interface CollectorFromServer {
   id: string;
-  name: string;
+  name: string | null;
   ip: string;
-  secret_key: string;
+  domain: string | null;
+  secret_key: string | null;
+  last_fetched_id: number;
   is_active: boolean;
   created_at?: Date;
   updated_at?: Date;
@@ -28,7 +30,9 @@ interface Collector {
   id?: string;
   name: string;
   ip: string;
+  domain: string;
   secret_key: string;
+  last_fetched_id: number;
   is_active: boolean;
   created_at?: Date;
   updated_at?: Date;
@@ -37,6 +41,16 @@ interface Collector {
     activation_key: string;
   }[];
 }
+
+// Helper function to convert CollectorFromServer to Collector
+const convertToCollector = (collectorFromServer: CollectorFromServer): Collector => {
+  return {
+    ...collectorFromServer,
+    name: collectorFromServer.name || '',
+    domain: collectorFromServer.domain || '',
+    secret_key: collectorFromServer.secret_key || '',
+  };
+};
 
 // Define columns for the data table
 const columns = [
@@ -56,6 +70,10 @@ const columns = [
   {
     accessorKey: "ip",
     header: "IP Address",
+  },
+  {
+    accessorKey: "domain",
+    header: "Domain",
   },
   {
     accessorKey: "is_active",
@@ -110,8 +128,9 @@ export function CollectorManagement() {
           const collectorsWithData = await Promise.all(
             (result.collectors || []).map(async (collector: CollectorFromServer) => {
               const projectsResult = await getProjectsUsingCollector(collector.id!);
+              const convertedCollector = convertToCollector(collector);
               return {
-                ...collector,
+                ...convertedCollector,
                 projects: projectsResult.success ? projectsResult.projects : [],
               };
             })
@@ -170,27 +189,23 @@ export function CollectorManagement() {
       
       if (collector.id) {
         // Update existing collector
-        const { id, name, ip, secret_key, is_active } = collector;
-        result = await updateCollector({ id, name, ip, secret_key, is_active });
+        const { id, name, ip, domain, secret_key, is_active } = collector;
+        result = await updateCollector({ id, name, ip, domain, secret_key, is_active });
         if (result.success) {
           // Refresh the collector data including projects
           const projectsResult = await getProjectsUsingCollector(result.collector!.id);
-          const updatedCollector = {
-            ...result.collector!,
-            projects: projectsResult.success ? projectsResult.projects : [],
-          };
+          const updatedCollector = convertToCollector(result.collector!);
+          updatedCollector.projects = projectsResult.success ? projectsResult.projects : [];
           setCollectors(collectors.map(p => p.id === collector.id ? updatedCollector : p));
         }
       } else {
         // Add new collector
-        const { name, ip, secret_key, is_active } = collector;
-        result = await createCollector({ name, ip, secret_key, is_active });
+        const { name, ip, domain, secret_key, is_active } = collector;
+        result = await createCollector({ name, ip, domain, secret_key, is_active });
         if (result.success) {
           // New collector won't have projects yet
-          const newCollector = {
-            ...result.collector!,
-            projects: [],
-          };
+          const newCollector = convertToCollector(result.collector!);
+          newCollector.projects = [];
           setCollectors([...collectors, newCollector]);
         }
       }
@@ -216,7 +231,7 @@ export function CollectorManagement() {
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Collector Management</h1>
-        <Button onClick={handleAdd}>Add Collector</Button>
+        {/* <Button onClick={handleAdd}>Add Collector</Button> */}
       </div>
       
       <div className="bg-white rounded-lg border-0">

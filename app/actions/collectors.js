@@ -18,6 +18,7 @@ export async function getCollectors() {
         id: true,
         name: true,
         ip: true,
+        domain: true,
         secret_key: true,
         last_fetched_id: true,
         is_active: true,
@@ -58,6 +59,7 @@ export async function getCollectorById(id) {
         id: true,
         name: true,
         ip: true,
+        domain: true,
         secret_key: true,
         last_fetched_id: true,
         is_active: true,
@@ -131,6 +133,7 @@ export async function getProjectsUsingCollector(collectorId) {
 export async function createCollector({ 
   name,
   ip,
+  domain,
   secret_key,
   is_active
 }) {
@@ -143,6 +146,7 @@ export async function createCollector({
       data: {
         name: name,
         ip: ip,
+        domain: domain,
         secret_key: secret_key,
         last_fetched_id: 0,
         is_active: Boolean(is_active),
@@ -153,6 +157,7 @@ export async function createCollector({
         id: true,
         name: true,
         ip: true,
+        domain: true,
         secret_key: true,
         last_fetched_id: true,
         is_active: true,
@@ -188,6 +193,7 @@ export async function updateCollector({
   id, 
   name,
   ip,
+  domain,
   secret_key,
   is_active
 }) {
@@ -203,6 +209,7 @@ export async function updateCollector({
       data: {
         name: name,
         ip: ip,
+        domain: domain,
         secret_key: secret_key,
         is_active: Boolean(is_active),
         updated_at: now,
@@ -211,6 +218,7 @@ export async function updateCollector({
         id: true,
         name: true,
         ip: true,
+        domain: true,
         secret_key: true,
         last_fetched_id: true,
         is_active: true,

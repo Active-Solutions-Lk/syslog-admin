@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model internal_log {
@@ -35,15 +36,15 @@ model admins {
 }
 
 model packages {
-  id           Int        @id @default(autoincrement())
-  name         String     @db.VarChar(50)
-  log_count    Int
-  duration     Float      @db.Float
-  device_count Int
-  log_analyce  Int        @db.TinyInt
-  created_at   DateTime   @default(now()) @db.Timestamp(0)
-  updated_at   DateTime   @default(now()) @db.Timestamp(0)
-  projects     projects[]
+  id               Int        @id @default(autoincrement())
+  name             String     @db.VarChar(50)
+  log_count        Int
+  log_duration     String     @db.VarChar(50)
+  project_duration String     @db.VarChar(50)
+  device_count     Int
+  created_at       DateTime   @default(now()) @db.Timestamp(0)
+  updated_at       DateTime   @default(now()) @db.Timestamp(0)
+  projects         projects[]
 }
 
 model ports {
@@ -56,19 +57,20 @@ model ports {
 
 model projects {
   id              Int           @id @default(autoincrement())
-  activation_key  String        @unique @db.VarChar(50)
+  activation_key  String        @unique @db.VarChar(100)
   pkg_id          Int
   admin_id        Int?
   collector_ip    Int?
   logger_ip       String?       @db.VarChar(50)
   reseller_id     Int?
-  type            Int
   created_at      DateTime      @default(now()) @db.Timestamp(0)
   updated_at      DateTime      @default(now()) @db.Timestamp(0)
   end_customer_id Int?
   port_id         Int?
   secret_key      String        @unique @db.VarChar(100)
   status          Boolean
+  type            Int
+  api_logs        api_logs[]
   admins          admins?       @relation(fields: [admin_id], references: [id], onDelete: Cascade, map: "fk_admin_id_admins_id")
   collector       collectors?   @relation(fields: [collector_ip], references: [id], map: "fk_collector_ip_collectors_id")
   end_customer    end_customer? @relation(fields: [end_customer_id], references: [id], onDelete: Cascade, map: "fk_end_customer_id")
@@ -135,13 +137,40 @@ model project_types {
 }
 
 model collectors {
-  id              Int       @id @default(autoincrement())
-  name            String    @db.VarChar(50)
-  ip              String    @db.VarChar(100)
-  secret_key      String    @db.VarChar(100)
+  id              Int        @id @default(autoincrement())
+  name            String?    @db.VarChar(50)
+  ip              String     @db.VarChar(100)
+  domain          String?    @db.VarChar(50)
+  secret_key      String?    @db.VarChar(100)
   last_fetched_id Int
   is_active       Boolean
-  created_at      DateTime  @default(now()) @db.Timestamp(0)
-  updated_at      DateTime  @default(now()) @db.Timestamp(0)
+  created_at      DateTime   @default(now()) @db.Timestamp(0)
+  updated_at      DateTime   @default(now()) @db.Timestamp(0)
   projects        projects[]
+}
+
+model analyzers {
+  id         Int      @id @default(autoincrement())
+  name       String?  @db.VarChar(50)
+  ip         String   @db.VarChar(50)
+  domain     String?  @db.VarChar(50)
+  status     Int      @db.TinyInt
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  updated_at DateTime @default(now()) @db.Timestamp(0)
+}
+
+model api_logs {
+  id              Int      @id @unique(map: "id") @default(autoincrement())
+  project_id      Int
+  cpu_status      Int
+  ram_status      Int
+  log_count       Int
+  device_count    Int
+  last_login_date DateTime @default(now()) @db.Timestamp(0)
+  description     String   @db.VarChar(100)
+  created_at      DateTime @default(now()) @db.Timestamp(0)
+  updated_at      DateTime @default(now()) @db.Timestamp(0)
+  project         projects @relation(fields: [project_id], references: [id], onDelete: Cascade, map: "fk_project_id_with_projects_id")
+
+  @@index([project_id], map: "project_id")
 }

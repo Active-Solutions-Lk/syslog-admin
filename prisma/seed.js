@@ -111,23 +111,23 @@ async function main() {
     {
       name: 'Basic Package',
       log_count: 1000,
-      duration: 30,
+      log_duration: '30 days',
+      project_duration: '30 days',
       device_count: 5,
-      log_analyce: 1,
     },
     {
       name: 'Standard Package',
       log_count: 5000,
-      duration: 90,
+      log_duration: '90 days',
+      project_duration: '90 days',
       device_count: 20,
-      log_analyce: 1,
     },
     {
       name: 'Premium Package',
       log_count: 10000,
-      duration: 365,
+      log_duration: '365 days',
+      project_duration: '365 days',
       device_count: 100,
-      log_analyce: 1,
     },
   ];
 
@@ -148,9 +148,9 @@ async function main() {
         data: {
           name: pkg.name,
           log_count: pkg.log_count,
-          duration: pkg.duration,
+          log_duration: pkg.log_duration,
+          project_duration: pkg.project_duration,
           device_count: pkg.device_count,
-          log_analyce: pkg.log_analyce,
           created_at: new Date(),
           updated_at: new Date(),
         },
@@ -320,6 +320,56 @@ async function main() {
     }
   }
 
+  // Create sample analyzers
+  const analyzerData = [
+    {
+      name: 'Analyzer 1',
+      ip: '192.168.10.10',
+      domain: 'analyzer1.example.com',
+      status: 1,
+    },
+    {
+      name: 'Analyzer 2',
+      ip: '192.168.10.11',
+      domain: 'analyzer2.example.com',
+      status: 1,
+    },
+    {
+      name: 'Analyzer 3',
+      ip: '192.168.10.12',
+      domain: 'analyzer3.example.com',
+      status: 0,
+    },
+  ];
+
+  const analyzers = [];
+  for (const analyzer of analyzerData) {
+    // Check if analyzer already exists
+    const existingAnalyzer = await prisma.analyzers.findFirst({
+      where: {
+        ip: analyzer.ip,
+      },
+    });
+
+    if (existingAnalyzer) {
+      analyzers.push(existingAnalyzer);
+      console.log(`Analyzer already exists: ${existingAnalyzer.name}`);
+    } else {
+      const createdAnalyzer = await prisma.analyzers.create({
+        data: {
+          name: analyzer.name,
+          ip: analyzer.ip,
+          domain: analyzer.domain,
+          status: analyzer.status,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      });
+      analyzers.push(createdAnalyzer);
+      console.log(`Created analyzer: ${createdAnalyzer.name}`);
+    }
+  }
+
   // Create sample projects
   const projectData = [
     {
@@ -458,6 +508,44 @@ async function main() {
       console.log(`Updated project ${projects[i].id} with port ${ports[i].id}`);
     } else {
       console.log(`Project ${projects[i].id} already has a port assigned`);
+    }
+  }
+
+  // Create sample API logs for projects
+  const apiLogData = [];
+  for (let i = 0; i < projects.length; i++) {
+    // Create 2-3 logs per project
+    const logCount = 2 + (i % 2);
+    for (let j = 0; j < logCount; j++) {
+      apiLogData.push({
+        project_id: projects[i].id,
+        cpu_status: 50 + (j * 10), // Vary CPU usage
+        ram_status: 60 + (j * 5),  // Vary RAM usage
+        log_count: 1000 + (j * 500), // Vary log count
+        device_count: 10 + j,       // Vary device count
+        description: `System log entry #${j+1} for project ${projects[i].id}`,
+      });
+    }
+  }
+
+  for (const log of apiLogData) {
+    try {
+      const createdLog = await prisma.api_logs.create({
+        data: {
+          project_id: log.project_id,
+          cpu_status: log.cpu_status,
+          ram_status: log.ram_status,
+          log_count: log.log_count,
+          device_count: log.device_count,
+          last_login_date: new Date(Date.now() - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000)), // Random date within last week
+          description: log.description,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      });
+      console.log(`Created API log: ${createdLog.id} for project ${log.project_id}`);
+    } catch (error) {
+      console.error(`Error creating API log for project ${log.project_id}:`, error);
     }
   }
 

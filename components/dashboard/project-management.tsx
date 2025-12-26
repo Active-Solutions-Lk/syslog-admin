@@ -9,10 +9,10 @@ import {
 } from "@/components/ui/avatar";
 // import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-// import { Label } from "@/components/ui/label";
 import React, { useState, useEffect, useMemo } from "react";
 import { getProjects, createProject, updateProject, deleteProject, updateProjectStatus } from "@/app/actions/project";
 import { CellContext } from "@tanstack/react-table";
+import { ApiLogsAdvancedView } from "@/components/dashboard/api-logs-advanced-view";
 
 // Define types
 interface ProjectFromServer {
@@ -96,6 +96,9 @@ export function ProjectManagement() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  // Add state for advanced view dialog
+  const [isAdvancedViewOpen, setIsAdvancedViewOpen] = useState(false);
+  const [viewingProject, setViewingProject] = useState<Project | null>(null);
 
   // Fetch projects from server
   useEffect(() => {
@@ -148,7 +151,9 @@ export function ProjectManagement() {
 
   const handleAdvancedView = (project: Project) => {
     console.log("Advanced view for:", project);
-    // In a real app, this would navigate to a detailed view
+    // Set the project to view and open the dialog
+    setViewingProject(project);
+    setIsAdvancedViewOpen(true);
   };
 
   const handleStatusChange = React.useCallback(async (project: Project, newStatus: boolean) => {
@@ -317,6 +322,18 @@ export function ProjectManagement() {
         project={editingProject || undefined}
         onSave={handleSaveProject}
       />
+      
+      {/* Advanced View: reuse API logs advanced dialog by activation key */}
+      {viewingProject?.activation_key && (
+        <ApiLogsAdvancedView
+          open={isAdvancedViewOpen}
+          onOpenChange={(open) => {
+            setIsAdvancedViewOpen(open);
+            if (!open) setViewingProject(null);
+          }}
+          activationKey={viewingProject.activation_key}
+        />
+      )}
     </>
   );
 }

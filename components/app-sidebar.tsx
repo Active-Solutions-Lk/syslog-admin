@@ -40,6 +40,10 @@ const data = {
           title: "Collectors",
           url: "/dashboard/collectors",
         },
+         {
+          title: "Analyzers",
+          url: "/dashboard/analyzers",
+        },
       ],
     },
     {
@@ -82,6 +86,21 @@ const data = {
         {
           title: "Admins",
           url: "/dashboard/admins",
+        },
+      ],
+    },
+     {
+      title: "Logs",
+      url: "#",
+      icon: "IconFileAi",
+      items: [
+        {
+          title: "API Logs",
+          url: "/dashboard/api-logs",
+        },
+        {
+          title: "Console Logs",
+          url: "/dashboard/console-logs",
         },
       ],
     },

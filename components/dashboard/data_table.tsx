@@ -291,7 +291,7 @@ export function DataTable<TData, TValue>({
               className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden w-full text-left"
               onClick={() => contextMenu?.row && handleAdvancedView(contextMenu.row)}
             >
-              Advanced View
+              Statics
             </button>
           )}
         </div>
