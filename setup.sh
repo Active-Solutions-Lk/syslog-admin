@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Syslog Admin Setup Script for Ubuntu Linux
+# Syslog Admin Setup Script for Linux with MariaDB
 # This script automates the installation and setup process for the syslog-admin project
 
 echo "Starting Syslog Admin Setup for Ubuntu Linux..."
@@ -39,28 +39,28 @@ else
     echo "Node.js and npm installed successfully."
 fi
 
-# 3. Install MySQL if not already installed
-echo "3. Checking MySQL installation..."
-if package_installed mysql-server; then
-    echo "MySQL is already installed."
+# 3. Install MariaDB if not already installed
+echo "3. Checking MariaDB installation..."
+if package_installed mariadb-server || package_installed mysql-server; then
+    echo "MariaDB/MySQL is already installed."
 else
-    echo "Installing MySQL..."
-    sudo apt-get install -y mysql-server
-    echo "MySQL installed successfully."
+    echo "Installing MariaDB..."
+    sudo apt-get install -y mariadb-server
+    echo "MariaDB installed successfully."
 fi
 
-# Start MySQL service
-echo "Starting MySQL service..."
-sudo systemctl start mysql
-sudo systemctl enable mysql
+# Start MariaDB service
+echo "Starting MariaDB service..."
+sudo systemctl start mariadb
+sudo systemctl enable mariadb
 
 # Wait for service to start
 sleep 5
 
-if service_running mysql; then
-    echo "MySQL service started successfully."
+if service_running mariadb || service_running mysql; then
+    echo "MariaDB service started successfully."
 else
-    echo "Warning: Failed to start MySQL service. Please start it manually."
+    echo "Warning: Failed to start MariaDB service. Please start it manually."
 fi
 
 # 4. Install project dependencies
@@ -68,16 +68,13 @@ echo "4. Installing project dependencies..."
 npm install
 echo "Project dependencies installed successfully."
 
-# 5. Set up MySQL user, database, and .env file
-echo "5. Setting up MySQL database and user..."
-
-# Generate secure passwords
-DB_ROOT_PASSWORD=$(openssl rand -base64 12)
-DB_USER_PASSWORD=$(openssl rand -base64 12)
+# 5. Set up MySQL admin user, database, and .env file
+echo "5. Setting up MySQL admin database and user..."
 
 # Database configuration
 DB_NAME="syslog_admin"
-DB_USER="syslog_admin_user"
+DB_USER="admin"
+DB_USER_PASSWORD="admin@1234"
 
 # Create .env file with database configuration
 cat > .env << EOF
@@ -87,19 +84,24 @@ EOF
 
 echo ".env file created successfully."
 
-# Connect to MySQL and set up database and user
+# Connect to MariaDB/MySQL and set up database and user
 echo "Creating database and user..."
-mysql -u root << MYSQL_SCRIPT
+# Try to connect with mysql command first, then mariadb if needed
+if command_exists mysql; then
+    mysql -u root << MYSQL_SCRIPT
 CREATE DATABASE IF NOT EXISTS $DB_NAME;
 CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_USER_PASSWORD';
 GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
 FLUSH PRIVILEGES;
 MYSQL_SCRIPT
+else
+    echo "MySQL command not found, please connect manually to create database and user"
+fi
 
 if [ $? -eq 0 ]; then
-    echo "MySQL database and user created successfully."
+    echo "Database and user created successfully."
 else
-    echo "Warning: Failed to create MySQL database and user. You may need to set this up manually."
+    echo "Warning: Failed to create database and user. You may need to set this up manually."
     echo "Please create database '$DB_NAME' and user '$DB_USER' with appropriate privileges."
 fi
 
@@ -242,5 +244,6 @@ echo "Database Name: $DB_NAME"
 echo "Database User: $DB_USER"
 echo "Check the .env file for the full DATABASE_URL"
 echo ""
-echo "IMPORTANT: Please verify the MySQL root password in the script or update it accordingly."
-echo "The script uses a randomly generated password which may not match your actual MySQL root password."
+echo "IMPORTANT: The admin user has been created with the password 'admin@1234'"
+echo "IMPORTANT: Please verify the database root password in the script or update it accordingly."
+echo "The script uses a fixed password which you may want to change for security purposes."

@@ -11,6 +11,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import React, { useState, useEffect, useMemo } from "react";
 import { getProjects, createProject, updateProject, deleteProject, updateProjectStatus } from "@/app/actions/project";
+import { getAnalyzers } from "@/app/actions/analyzers";
 import { CellContext } from "@tanstack/react-table";
 import { ApiLogsAdvancedView } from "@/components/dashboard/api-logs-advanced-view";
 
@@ -94,6 +95,7 @@ interface Project {
 export function ProjectManagement() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [analyzers, setAnalyzers] = useState<{ id: string; name: string | null; ip?: string | null }[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   // Add state for advanced view dialog
@@ -104,14 +106,24 @@ export function ProjectManagement() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const result = await getProjects();
-        if (result.success) {
-          setProjects(result.projects || []);
+        const [projectsResult, analyzersResult] = await Promise.all([
+          getProjects(),
+          getAnalyzers(),
+        ]);
+
+        if (analyzersResult.success) {
+          setAnalyzers(analyzersResult.analyzers || []);
         } else {
-          console.error('Failed to fetch projects:', result.error);
+          console.error('Failed to fetch analyzers:', analyzersResult.error);
+        }
+
+        if (projectsResult.success) {
+          setProjects(projectsResult.projects || []);
+        } else {
+          console.error('Failed to fetch projects:', projectsResult.error);
         }
       } catch (error) {
-        console.error('Error fetching projects:', error);
+        console.error('Error fetching projects/analyzers:', error);
       } finally {
         setLoading(false);
       }
@@ -175,6 +187,12 @@ export function ProjectManagement() {
     }
   }, [projects, setProjects]);
 
+  const analyzerMap = React.useMemo(() => {
+    const m = new Map<string, string>();
+    analyzers.forEach((a) => m.set(a.id, a.name || a.ip || 'N/A'));
+    return m;
+  }, [analyzers]);
+
   // Define columns for the data table using useMemo to prevent re-creation on every render
   const columns = useMemo(() => [
     {
@@ -199,7 +217,12 @@ export function ProjectManagement() {
     },
     {
       accessorKey: "logger_ip",
-      header: "Logger IP",
+      header: "Analyzer",
+      cell: ({ row }: CellContext<Project, unknown>) => {
+        const id = row.original.logger_ip;
+        const display = id ? analyzerMap.get(id) || id : 'N/A';
+        return <span>{display}</span>;
+      },
     },
     {
       accessorKey: "packages.name",
@@ -258,7 +281,7 @@ export function ProjectManagement() {
         </div>
       ),
     },
-  ], [handleStatusChange]);
+  ], [handleStatusChange, analyzerMap]);
 
   const handleSaveProject = async (project: Project) => {
     try {

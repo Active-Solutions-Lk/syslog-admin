@@ -165,6 +165,7 @@ model api_logs {
   cpu_status      Int
   ram_status      Int
   log_count       Int
+  type            String   @db.VarChar(10)
   device_count    Int
   last_login_date DateTime @default(now()) @db.Timestamp(0)
   description     String   @db.VarChar(100)

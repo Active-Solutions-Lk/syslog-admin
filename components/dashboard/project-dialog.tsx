@@ -24,6 +24,7 @@ import { getAdmins } from "@/app/actions/admin";
 import { getResellers } from "@/app/actions/reseller";
 import { getEndCustomers } from "@/app/actions/end-customer";
 import { getCollectors } from "@/app/actions/collectors"; // Add this import
+import { getAnalyzers } from "@/app/actions/analyzers"; // Add this import
 
 // Function to generate a unique activation key in format AB12-CD34-EF58
 const generateActivationKey = () => {
@@ -131,7 +132,7 @@ export function ProjectDialog({
   onSave,
 }: ProjectDialogProps) {
   const [collector_ip, setCollectorIp] = useState<string | null>(null); // Change to string | null
-  const [logger_ip, setLoggerIp] = useState("");
+  const [analyzer_id, setAnalyzerId] = useState<string | null>(null);
   const [pkg_id, setPkgId] = useState("");
   const [admin_id, setAdminId] = useState<string | null>(null);
   const [reseller_id, setResellerId] = useState<string | null>(null);
@@ -156,6 +157,9 @@ export function ProjectDialog({
   const [collectors, setCollectors] = useState<
     { value: string; label: string }[]
   >([]); // Add collectors state
+  const [analyzers, setAnalyzers] = useState<
+    { value: string; label: string }[]
+  >([]); // Add analyzers state
   const [availablePorts, setAvailablePorts] = useState<
     { value: string; label: string }[]
   >([]);
@@ -235,9 +239,21 @@ export function ProjectDialog({
             setCollectors(collectorOptions);
           }
 
+          // Fetch analyzers
+          const analyzersResult = await getAnalyzers();
+          if (analyzersResult.success && analyzersResult.analyzers) {
+            const analyzerOptions = analyzersResult.analyzers.map(
+              (analyzer: CollectorOption & { ip?: string | null }) => ({
+                value: analyzer.id,
+                label: analyzer.name || analyzer.ip || "N/A",
+              })
+            );
+            setAnalyzers(analyzerOptions);
+          }
+
           if (project) {
             setCollectorIp(project.collector_ip || null); // Set collector ID
-            setLoggerIp(project.logger_ip || "");
+            setAnalyzerId(project.logger_ip || null);
             setPkgId(project.pkg_id || "");
             setAdminId(project.admin_id || null);
             setResellerId(project.reseller_id || null);
@@ -256,7 +272,7 @@ export function ProjectDialog({
             }
           } else {
             setCollectorIp(null); // Reset collector ID
-            setLoggerIp("");
+            setAnalyzerId(null);
             setPkgId("");
             setAdminId(null);
             setResellerId(null);
@@ -375,7 +391,7 @@ export function ProjectDialog({
 
     const projectData: Project = {
       collector_ip, // This is now the collector ID
-      logger_ip: logger_ip || null,
+      logger_ip: analyzer_id || null,
       pkg_id,
       admin_id,
       reseller_id,
@@ -464,14 +480,17 @@ export function ProjectDialog({
                   emptyMessage="No collectors found."
                 />
               </div>
-              <Label htmlFor="logger_ip" className="text-right col-span-1">
-                Logger IP
+              <Label htmlFor="analyzer" className="text-right col-span-1">
+                Analyzer
               </Label>
               <div className="col-span-3">
-                <Input
-                  id="logger_ip"
-                  value={logger_ip}
-                  onChange={(e) => setLoggerIp(e.target.value)}
+                <ComboBox
+                  options={analyzers}
+                  value={analyzer_id || ""}
+                  onValueChange={(value: string) => setAnalyzerId(value || null)}
+                  placeholder="Select analyzer..."
+                  searchPlaceholder="Search analyzers..."
+                  emptyMessage="No analyzers found."
                 />
               </div>
             </div>

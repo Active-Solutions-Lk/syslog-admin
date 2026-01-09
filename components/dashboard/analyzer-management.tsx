@@ -46,15 +46,15 @@ const convertToAnalyzer = (analyzerFromServer: AnalyzerFromServer): Analyzer => 
 // Define columns for the data table
 const columns = [
   {
-    accessorKey: "name",
-    header: "Name",
+    accessorKey: "id",
+    header: "ID",
     cell: ({ row }: CellContext<Analyzer, unknown>) => (
       <div className="flex items-center gap-3">
-        <Avatar className="h-8 w-8">
-          <AvatarImage src={`https://api.dicebear.com/6.x/initials/svg?seed=${row.original.name || 'A'}`}/>
-          <AvatarFallback>{row.original.name ? row.original.name.charAt(0) : 'A'}</AvatarFallback>
-        </Avatar>
-        <span>{row.original.name || 'N/A'}</span>
+        {/* <Avatar className="h-8 w-8">
+          <AvatarImage src={`https://api.dicebear.com/6.x/initials/svg?seed=${row.original.id || 'A'}`}/>
+          <AvatarFallback>{row.original.id ? row.original.id.charAt(0).toUpperCase() : 'A'}</AvatarFallback>
+        </Avatar> */}
+        <span className="text-sm text-gray-600">{row.original.id || 'N/A'}</span>
       </div>
     ),
   },
