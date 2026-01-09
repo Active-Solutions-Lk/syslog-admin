@@ -522,6 +522,7 @@ async function main() {
         cpu_status: 50 + (j * 10), // Vary CPU usage
         ram_status: 60 + (j * 5),  // Vary RAM usage
         log_count: 1000 + (j * 500), // Vary log count
+        type: 'SYSTEM', // Add the type field
         device_count: 10 + j,       // Vary device count
         description: `System log entry #${j+1} for project ${projects[i].id}`,
       });
@@ -536,6 +537,7 @@ async function main() {
           cpu_status: log.cpu_status,
           ram_status: log.ram_status,
           log_count: log.log_count,
+          type: log.type, // Include the type field
           device_count: log.device_count,
           last_login_date: new Date(Date.now() - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000)), // Random date within last week
           description: log.description,
@@ -585,6 +587,62 @@ async function main() {
         },
       });
       console.log(`Created session: ${createdSession.id}`);
+    }
+  }
+
+  // Create sample internal logs
+  const internalLogData = [
+    {
+      related_table: 'projects',
+      related_table_id: projects[0].id,
+      severity: 1,
+      message: 'Project created successfully',
+      admin_id: admins[0].id,
+      action: 'CREATE',
+      status_code: 200,
+      additional_data: 'Project activation',
+    },
+    {
+      related_table: 'admins',
+      related_table_id: admins[1].id,
+      severity: 2,
+      message: 'Admin updated profile',
+      admin_id: admins[1].id,
+      action: 'UPDATE',
+      status_code: 200,
+      additional_data: 'Profile update',
+    },
+    {
+      related_table: 'api_logs',
+      related_table_id: 1,
+      severity: 3,
+      message: 'API log warning',
+      admin_id: admins[0].id,
+      action: 'WARNING',
+      status_code: 400,
+      additional_data: 'High CPU usage detected',
+    },
+  ];
+
+  for (const log of internalLogData) {
+    try {
+      const createdLog = await prisma.internal_log.create({
+        data: {
+          related_table: log.related_table,
+          related_table_id: log.related_table_id,
+          severity: log.severity,
+          message: log.message,
+          admin_id: log.admin_id,
+          action: log.action,
+          status_code: log.status_code,
+          additional_data: log.additional_data,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      });
+      console.log(`Created internal log: ${createdLog.id} for table ${log.related_table}`);
+    } catch (error) {
+      console.error(`Error creating internal log:`, error);
     }
   }
 
