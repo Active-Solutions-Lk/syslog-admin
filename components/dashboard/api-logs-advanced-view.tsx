@@ -12,6 +12,18 @@ import { getApiLogsByActivationKey, getProjectPackageInfo } from "@/app/actions/
 import { CellContext, ColumnDef } from "@tanstack/react-table";
 import { ApiLogsAdvancedDialog, ApiLog, AreaChartDataPoint } from "@/components/dashboard/api-logs-advanced-dialog";
 
+// Define types for package info
+interface PackageInfo {
+  id?: string;
+  name?: string;
+  log_quota?: number;
+  device_quota?: number;
+  log_count?: number;
+  device_count?: number;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
 interface ApiLogsAdvancedViewProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -25,11 +37,55 @@ export function ApiLogsAdvancedView({ open, onOpenChange, activationKey }: ApiLo
   const [ramData, setRamData] = useState<AreaChartDataPoint[]>([]);
   const [logData, setLogData] = useState<AreaChartDataPoint[]>([]);
   const [deviceData, setDeviceData] = useState<AreaChartDataPoint[]>([]);
-  const [packageInfo, setPackageInfo] = useState<any>(null);
+  const [packageInfo, setPackageInfo] = useState<PackageInfo | null>(null);
 
   // Fetch API logs for the selected activation key
   useEffect(() => {
     if (open && activationKey) {
+      // Define types for API response
+      interface ApiLogFromServer {
+        id: string;
+        project_id: string;
+        cpu_status: number;
+        ram_status: number;
+        log_count: number;
+        device_count: number;
+        created_at: string | null;
+        updated_at: string | null;
+        last_login_date: Date;
+        description: string;
+        project: {
+          activation_key: string;
+        };
+      }
+
+      interface PackageInfoFromServer {
+        id: string;
+        name: string;
+        log_quota: number;
+        device_quota: number;
+        log_count: number;
+        device_count: number;
+        created_at: Date;
+        updated_at: Date;
+      }
+      
+      // Helper function to convert ApiLogFromServer to ApiLog
+      const convertToApiLog = (apiLogFromServer: ApiLogFromServer): ApiLog => {
+        return {
+          ...apiLogFromServer,
+          created_at: apiLogFromServer.created_at ? new Date(apiLogFromServer.created_at) : undefined,
+          updated_at: apiLogFromServer.updated_at ? new Date(apiLogFromServer.updated_at) : undefined,
+        };
+      };
+
+      // Helper function to convert PackageInfoFromServer to PackageInfo
+      const convertToPackageInfo = (packageInfoFromServer: PackageInfoFromServer): PackageInfo => {
+        return {
+          ...packageInfoFromServer,
+        };
+      };
+      
       const fetchApiLogs = async () => {
         try {
           setLoading(true);
@@ -42,16 +98,17 @@ export function ApiLogsAdvancedView({ open, onOpenChange, activationKey }: ApiLo
           
           // Handle API logs
           if (logsResult.success) {
-            const logs = logsResult.apiLogs || [];
-            setApiLogs(logs);
+            const logsFromServer = logsResult.apiLogs || [];
+            const convertedLogs = logsFromServer.map(convertToApiLog);
+            setApiLogs(convertedLogs);
             
             // Prepare chart data - aggregate CPU usage over last 7 days
-            if (logs.length > 0) {
+            if (convertedLogs.length > 0) {
               // Filter logs for the last 7 days
               const sevenDaysAgo = new Date();
               sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
               
-              const recentLogs = logs.filter(log => {
+              const recentLogs = convertedLogs.filter((log: ApiLog) => {
                 if (!log.created_at) return false;
                 const logDate = new Date(log.created_at);
                 return logDate >= sevenDaysAgo;
@@ -61,7 +118,7 @@ export function ApiLogsAdvancedView({ open, onOpenChange, activationKey }: ApiLo
               const dailyCpuData: { [key: string]: { total: number; count: number } } = {};
               const dailyRamData: { [key: string]: { total: number; count: number } } = {};
               
-              recentLogs.forEach(log => {
+              recentLogs.forEach((log: ApiLog) => {
                 if (log.created_at) {
                   const date = new Date(log.created_at);
                   const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -107,7 +164,7 @@ export function ApiLogsAdvancedView({ open, onOpenChange, activationKey }: ApiLo
               
               // For other stats, use the most recent values
               if (recentLogs.length > 0) {
-                const latestLog = recentLogs[0]; // Most recent log
+                const latestLog = recentLogs[0] as ApiLog; // Most recent log
                 
                 const logPoints = [{
                   timestamp: latestLog.created_at ? new Date(latestLog.created_at).toLocaleDateString() : 'Latest',
@@ -142,8 +199,8 @@ export function ApiLogsAdvancedView({ open, onOpenChange, activationKey }: ApiLo
           }
           
           // Handle package info
-          if (packageResult.success) {
-            setPackageInfo(packageResult.packageInfo);
+          if (packageResult.success && packageResult.packageInfo) {
+            setPackageInfo(convertToPackageInfo(packageResult.packageInfo));
           } else {
             console.error('Failed to fetch package info:', packageResult.error);
           }

@@ -7,7 +7,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
 import { getCollectors, createCollector, updateCollector, deleteCollector, getProjectsUsingCollector } from "@/app/actions/collectors";

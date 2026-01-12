@@ -2,12 +2,12 @@
 
 import { DataTable } from "@/components/dashboard/data_table";
 import { AnalyzerDialog } from "@/components/dashboard/analyzer-dialog";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+// import {
+//   Avatar,
+//   AvatarFallback,
+//   AvatarImage,
+// } from "@/components/ui/avatar";
+// import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
 import { getAnalyzers, createAnalyzer, updateAnalyzer, deleteAnalyzer } from "@/app/actions/analyzers";

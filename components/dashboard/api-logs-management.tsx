@@ -6,7 +6,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getApiLogs } from "@/app/actions/api-logs";
 import { CellContext } from "@tanstack/react-table";
 import { ApiLogsAdvancedView } from "@/components/dashboard/api-logs-advanced-view";
@@ -22,8 +22,8 @@ interface ApiLogFromServer {
   device_count: number;
   last_login_date?: Date | string;
   description?: string;
-  created_at?: string | Date;
-  updated_at?: string | Date;
+  created_at?: string | null;
+  updated_at?: string | null;
   project?: {
     activation_key: string;
   };
@@ -49,6 +49,8 @@ interface ApiLog {
 const convertToApiLog = (apiLogFromServer: ApiLogFromServer): ApiLog => {
   return {
     ...apiLogFromServer,
+    created_at: apiLogFromServer.created_at || undefined,
+    updated_at: apiLogFromServer.updated_at || undefined,
   };
 };
 
@@ -134,7 +136,7 @@ export function ApiLogsManagement() {
   // Fetch API logs from server (supports manual refresh)
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchApiLogs = async (isRefresh = false) => {
+  const fetchApiLogs = useCallback(async (isRefresh = false) => {
     if (isRefresh && refreshing) return;
 
     try {
@@ -168,11 +170,11 @@ export function ApiLogsManagement() {
       if (isRefresh) setRefreshing(false);
       else setLoading(false);
     }
-  };
+  }, [refreshing]); // Omitting convertToApiLog and getApiLogs as they don't change
 
   useEffect(() => {
     fetchApiLogs(false);
-  }, []);
+  }, [fetchApiLogs]);
 
   const handleAdvancedView = (apiLog: ApiLog) => {
     if (apiLog.project?.activation_key) {
