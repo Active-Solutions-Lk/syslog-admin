@@ -20,6 +20,7 @@ interface Collector {
   ip: string;
   domain: string;
   secret_key: string;
+  last_fetched_id: number;
   is_active: boolean;
   created_at?: Date;
   updated_at?: Date;
@@ -29,7 +30,7 @@ interface CollectorDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   collector?: Collector;
-  onSave: (collector: Collector) => void;
+  onSave: (collector: Collector) => void | Promise<void>;
 }
 
 export function CollectorDialog({ open, onOpenChange, collector, onSave }: CollectorDialogProps) {
@@ -81,6 +82,7 @@ export function CollectorDialog({ open, onOpenChange, collector, onSave }: Colle
       ip: ip.trim(),
       domain: domain.trim(),
       secret_key: secretKey.trim(),
+      last_fetched_id: 0, // Initialize with default value
       is_active: isActive,
     };
     
