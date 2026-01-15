@@ -491,6 +491,7 @@ export function ProjectDialog({
                   placeholder="Select analyzer..."
                   searchPlaceholder="Search analyzers..."
                   emptyMessage="No analyzers found."
+                  disabled={!project}
                 />
               </div>
             </div>

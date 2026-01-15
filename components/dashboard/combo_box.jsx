@@ -25,7 +25,8 @@ export function ComboBox({
   onValueChange, 
   placeholder = "Select an option...",
   searchPlaceholder = "Search...",
-  emptyMessage = "No option found."
+  emptyMessage = "No option found.",
+  disabled = false
 }) {
   const [open, setOpen] = React.useState(false)
 
@@ -37,6 +38,7 @@ export function ComboBox({
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
+          disabled={disabled}
         >
           {value
             ? options.find((option) => option.value === value)?.label
