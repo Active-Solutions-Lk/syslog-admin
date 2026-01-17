@@ -14,7 +14,7 @@ const prisma = new PrismaClient({
 function generateActivationKey() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let key = '';
-  
+
   // Generate a key in the format XXXX-XXXX-XXXX
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 4; j++) {
@@ -22,7 +22,7 @@ function generateActivationKey() {
     }
     if (i < 2) key += '-';
   }
-  
+
   return key;
 }
 
@@ -30,22 +30,22 @@ function generateActivationKey() {
 async function generateUniqueActivationKey() {
   let key;
   let isUnique = false;
-  
+
   while (!isUnique) {
     key = generateActivationKey();
-    
+
     // Check if this key already exists
     const existingProject = await prisma.projects.findUnique({
       where: {
         activation_key: key,
       },
     });
-    
+
     if (!existingProject) {
       isUnique = true;
     }
   }
-  
+
   return key;
 }
 
@@ -53,12 +53,12 @@ async function generateUniqueActivationKey() {
 function generateSecretKey() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let key = '';
-  
+
   // Generate a 32-character secret key
   for (let i = 0; i < 32; i++) {
     key += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  
+
   return key;
 }
 
@@ -66,22 +66,22 @@ function generateSecretKey() {
 async function generateUniqueSecretKey() {
   let key;
   let isUnique = false;
-  
+
   while (!isUnique) {
     key = generateSecretKey();
-    
+
     // Check if this key already exists
     const existingProject = await prisma.projects.findUnique({
       where: {
         secret_key: key,
       },
     });
-    
+
     if (!existingProject) {
       isUnique = true;
     }
   }
-  
+
   return key;
 }
 
@@ -93,13 +93,13 @@ export async function getPackages() {
         name: true,
       },
     });
-    
+
     // Convert ids to strings for frontend
     const formattedPackages = packages.map(pkg => ({
       ...pkg,
       id: pkg.id.toString(),
     }));
-    
+
     return {
       success: true,
       packages: formattedPackages,
@@ -118,7 +118,7 @@ export async function getPackages() {
 export async function getAvailablePorts(collectorId) {
   try {
     console.log("Getting available ports for collector:", collectorId);
-    
+
     // Validate collectorId
     if (!collectorId) {
       console.log("No collector ID provided");
@@ -128,7 +128,7 @@ export async function getAvailablePorts(collectorId) {
         isDefaultCollector: false
       };
     }
-    
+
     // First, get the collector to check if it's a "default" collector
     const collector = await prisma.collectors.findUnique({
       where: {
@@ -140,7 +140,7 @@ export async function getAvailablePorts(collectorId) {
         is_active: true
       }
     });
-    
+
     console.log("Collector info:", collector);
 
     // Check if collector exists
@@ -156,14 +156,14 @@ export async function getAvailablePorts(collectorId) {
     // Check if this is a "default" collector
     // For now, we'll consider collectors with ID 1 or named "default" as default collectors
     // Also consider collectors that are inactive as default (to allow any port assignment)
-    const isDefaultCollector = collector && (collector.id === 1 || 
+    const isDefaultCollector = collector && (collector.id === 1 ||
       collector.name.toLowerCase().includes('default') ||
       !collector.is_active);
-    
+
     console.log("Is default collector:", isDefaultCollector);
 
     let availablePorts = [];
-    
+
     if (isDefaultCollector) {
       // For default collectors, all ports are available
       console.log("Fetching all ports for default collector");
@@ -178,7 +178,7 @@ export async function getAvailablePorts(collectorId) {
     } else {
       // For non-default collectors, only get ports that are not assigned to other projects with the same collector
       console.log("Fetching available ports for non-default collector");
-      
+
       // First, get all ports
       const allPorts = await prisma.ports.findMany({
         select: {
@@ -187,7 +187,7 @@ export async function getAvailablePorts(collectorId) {
         },
       });
       console.log("All ports count:", allPorts.length);
-      
+
       // Then, get ports that are already assigned to projects with the same collector ID
       const usedPorts = await prisma.ports.findMany({
         where: {
@@ -202,25 +202,25 @@ export async function getAvailablePorts(collectorId) {
           port: true,
         },
       });
-      
+
       console.log("Used ports count:", usedPorts.length);
-      
+
       // Create a set of used port IDs for quick lookup
       const usedPortIds = new Set(usedPorts.map(p => p.id));
-      
+
       // Filter out used ports to get available ports
       availablePorts = allPorts.filter(port => !usedPortIds.has(port.id));
       console.log("Available ports count:", availablePorts.length);
     }
-    
+
     // Convert ids to strings for frontend
     const formattedPorts = availablePorts.map(port => ({
       ...port,
       id: port.id.toString(),
     }));
-    
+
     console.log("Formatted ports count:", formattedPorts.length);
-    
+
     return {
       success: true,
       ports: formattedPorts,
@@ -292,7 +292,7 @@ export async function getProjects() {
         }
       },
     });
-    
+
     // Convert ids to strings for frontend
     const formattedProjects = projects.map(project => ({
       ...project,
@@ -303,11 +303,12 @@ export async function getProjects() {
       port_id: project.port_id ? project.port_id.toString() : null,
       end_customer_id: project.end_customer_id ? project.end_customer_id.toString() : null,
       collector_ip: project.collector_ip ? project.collector_ip.toString() : null, // Convert to string
+      logger_ip: project.logger_ip ? project.logger_ip.toString() : null, // Convert to string
       type: project.type.toString(),
       port: project.port ? { port: project.port.port } : null,
       project_type: project.project_type ? { name: project.project_type.name } : null,
     }));
-    
+
     return {
       success: true,
       projects: formattedProjects,
@@ -381,14 +382,14 @@ export async function getProjectById(id) {
         }
       },
     });
-    
+
     if (!project) {
       return {
         success: false,
         error: 'Project not found',
       };
     }
-    
+
     // Convert ids to strings for frontend
     const formattedProject = {
       ...project,
@@ -399,12 +400,13 @@ export async function getProjectById(id) {
       port_id: project.port_id ? project.port_id.toString() : null,
       end_customer_id: project.end_customer_id ? project.end_customer_id.toString() : null,
       collector_ip: project.collector_ip ? project.collector_ip.toString() : null, // Convert to string
+      logger_ip: project.logger_ip ? project.logger_ip.toString() : null, // Convert to string
       type: project.type.toString(),
       status: project.status,
       port: project.port ? { port: project.port.port } : null,
       project_type: project.project_type ? { name: project.project_type.name } : null,
     };
-    
+
     return {
       success: true,
       project: formattedProject,
@@ -420,13 +422,13 @@ export async function getProjectById(id) {
   }
 }
 
-export async function createProject({ 
-  collector_ip, 
-  logger_ip, 
-  pkg_id, 
-  admin_id, 
-  reseller_id, 
-  port_id, 
+export async function createProject({
+  collector_ip,
+  logger_ip,
+  pkg_id,
+  admin_id,
+  reseller_id,
+  port_id,
   end_customer_id,
   type
 }) {
@@ -444,12 +446,12 @@ export async function createProject({
           is_active: true
         }
       });
-      
+
       // Check if this is a "default" collector
-      const isDefaultCollector = collector && (collector.id === 1 || 
+      const isDefaultCollector = collector && (collector.id === 1 ||
         collector.name.toLowerCase().includes('default') ||
         !collector.is_active);
-      
+
       // For non-default collectors, verify port is not already assigned to another project with the same collector
       if (!isDefaultCollector) {
         const existingProject = await prisma.projects.findFirst({
@@ -458,7 +460,7 @@ export async function createProject({
             port_id: parseInt(port_id)
           }
         });
-        
+
         if (existingProject) {
           return {
             success: false,
@@ -467,23 +469,23 @@ export async function createProject({
         }
       }
     }
-    
+
     // Generate a unique activation key
     const activation_key = await generateUniqueActivationKey();
-    
+
     // Generate a unique secret key
     const secret_key = await generateUniqueSecretKey();
-    
+
     // Get current date for timestamps
     const now = new Date();
-    
+
     // Create project
     const project = await prisma.projects.create({
       data: {
         activation_key,
         secret_key,
         collector_ip: collector_ip ? parseInt(collector_ip) : null,
-        logger_ip: logger_ip || '',
+        logger_ip: logger_ip ? parseInt(logger_ip) : null,
         pkg_id: pkg_id && pkg_id !== '' ? parseInt(pkg_id) : 1,
         admin_id: admin_id ? parseInt(admin_id) : null,
         reseller_id: reseller_id ? parseInt(reseller_id) : null,
@@ -547,7 +549,7 @@ export async function createProject({
         }
       },
     });
-    
+
     // Convert ids to strings for frontend
     const formattedProject = {
       ...project,
@@ -561,7 +563,7 @@ export async function createProject({
       type: project.type.toString(),
       status: project.status,
     };
-    
+
     return {
       success: true,
       project: formattedProject,
@@ -578,15 +580,15 @@ export async function createProject({
   }
 }
 
-export async function updateProject({ 
-  id, 
-  activation_key, 
-  collector_ip, 
-  logger_ip, 
-  pkg_id, 
-  admin_id, 
-  reseller_id, 
-  port_id, 
+export async function updateProject({
+  id,
+  activation_key,
+  collector_ip,
+  logger_ip,
+  pkg_id,
+  admin_id,
+  reseller_id,
+  port_id,
   end_customer_id,
   type,
   status
@@ -605,12 +607,12 @@ export async function updateProject({
           is_active: true
         }
       });
-      
+
       // Check if this is a "default" collector
-      const isDefaultCollector = collector && (collector.id === 1 || 
+      const isDefaultCollector = collector && (collector.id === 1 ||
         collector.name.toLowerCase().includes('default') ||
         !collector.is_active);
-      
+
       // For non-default collectors, verify port is not already assigned to another project with the same collector
       if (!isDefaultCollector) {
         const existingProject = await prisma.projects.findFirst({
@@ -622,7 +624,7 @@ export async function updateProject({
             }
           }
         });
-        
+
         if (existingProject) {
           return {
             success: false,
@@ -631,10 +633,10 @@ export async function updateProject({
         }
       }
     }
-    
+
     // Get current date for updatedAt timestamp
     const now = new Date();
-    
+
     // Update project
     const project = await prisma.projects.update({
       where: {
@@ -643,7 +645,7 @@ export async function updateProject({
       data: {
         activation_key,
         collector_ip: collector_ip ? parseInt(collector_ip) : null,
-        logger_ip: logger_ip || '',
+        logger_ip: logger_ip ? parseInt(logger_ip) : null,
         pkg_id: pkg_id && pkg_id !== '' ? parseInt(pkg_id) : 1,
         admin_id: admin_id ? parseInt(admin_id) : null,
         reseller_id: reseller_id ? parseInt(reseller_id) : null,
@@ -705,7 +707,7 @@ export async function updateProject({
         }
       },
     });
-    
+
     // Convert ids to strings for frontend
     const formattedProject = {
       ...project,
@@ -719,7 +721,7 @@ export async function updateProject({
       type: project.type.toString(),
       status: project.status,
     };
-    
+
     return {
       success: true,
       project: formattedProject,
@@ -794,7 +796,7 @@ export async function updateProjectStatus(id, status) {
         }
       },
     });
-    
+
     // Convert ids to strings for frontend
     const formattedProject = {
       ...project,
@@ -806,7 +808,7 @@ export async function updateProjectStatus(id, status) {
       end_customer_id: project.end_customer_id ? project.end_customer_id.toString() : null,
       status: project.status,
     };
-    
+
     return {
       success: true,
       project: formattedProject,
@@ -837,7 +839,7 @@ export async function deleteProject(id) {
         id: parseInt(id),
       },
     });
-    
+
     return {
       success: true,
       message: 'Project deleted successfully',
@@ -867,13 +869,13 @@ export async function getProjectTypes() {
         name: true,
       },
     });
-    
+
     // Convert ids to strings for frontend
     const formattedProjectTypes = projectTypes.map(type => ({
       ...type,
       id: type.id.toString(),
     }));
-    
+
     return {
       success: true,
       projectTypes: formattedProjectTypes,
@@ -900,20 +902,20 @@ export async function getPortById(id) {
         port: true,
       },
     });
-    
+
     if (!port) {
       return {
         success: false,
         error: 'Port not found',
       };
     }
-    
+
     // Convert ids to strings for frontend
     const formattedPort = {
       ...port,
       id: port.id.toString(),
     };
-    
+
     return {
       success: true,
       port: formattedPort,
@@ -950,7 +952,7 @@ export async function createInternalLog(logData) {
         updated_at: new Date()
       }
     });
-    
+
     console.log('Internal log created successfully');
     return { success: true, data: logEntry };
   } catch (error) {

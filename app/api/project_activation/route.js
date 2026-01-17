@@ -22,7 +22,7 @@ function normalizeIpAddress(ip) {
     // Extract the IPv4 part
     return ip.substring(7); // Remove '::ffff:' prefix
   }
-  
+
   // For other IPv6 addresses, return as is
   // For IPv4 addresses, return as is
   return ip;
@@ -40,68 +40,68 @@ function parseSecureToken(secureToken, clientIp) {
     // Decode the base64 token
     const decodedToken = Buffer.from(secureToken, 'base64').toString('utf-8');
     console.log('Decoded token:', decodedToken);
-    
+
     // Extract IP address from the end of the token
     // Handle both IPv4 (x.x.x.x) and IPv6-mapped IPv4 (::ffff:x.x.x.x) formats
     let ip = '';
     let ipStartIndex = -1;
-    
+
     // Look for IPv4 pattern at the end (most common case)
     const ipv4Pattern = /\d+\.\d+\.\d+\.\d+$/;
     const ipv4Match = decodedToken.match(ipv4Pattern);
-    
+
     if (ipv4Match) {
       ip = ipv4Match[0];
       ipStartIndex = decodedToken.lastIndexOf(ip);
     }
-    
+
     if (!ip || ipStartIndex === -1) {
       console.error('Could not extract IP address from token');
       return null;
     }
-    
+
     // Find the IP part with the colon prefix
     const ipPart = ':' + ip;
     const ipPartStartIndex = decodedToken.lastIndexOf(ipPart);
-    
+
     if (ipPartStartIndex === -1) {
       console.error('Could not find IP part in token');
       return null;
     }
-    
+
     // Extract everything before the IP part
     const prefix = decodedToken.substring(0, ipPartStartIndex);
-    
+
     // The token structure is: activationKey:secret:ip
     // So we need to find the first colon (separates activationKey from secret)
-    
+
     // Find the first colon (between activationKey and secret)
     const firstColonIndex = prefix.indexOf(':');
-    
+
     if (firstColonIndex === -1) {
       console.error('Could not find first colon separator');
       return null;
     }
-    
+
     // Extract components
     const activationKey = prefix.substring(0, firstColonIndex);
     let secret = prefix.substring(firstColonIndex + 1);
-    
+
     // For IPv6-mapped IPv4 addresses, we need to remove the :::ffff: part from the secret
     // The secret ends with :::ffff: for IPv6-mapped addresses
     if (clientIp.startsWith('::ffff:')) {
       // Check if the secret ends with :::ffff: and remove it
       if (secret.endsWith(':::ffff:')) {
         secret = secret.substring(0, secret.length - 7); // Remove :::ffff:
-      } 
+      }
       // Check if the secret ends with :::ffff (without trailing colon) and remove it
       else if (secret.endsWith(':::ffff')) {
         secret = secret.substring(0, secret.length - 7); // Remove :::ffff
       }
     }
-    
+
     // ip is already extracted
-    
+
     return {
       activationKey,
       secret,
@@ -129,7 +129,7 @@ function calculateProjectEndDate(startDate, pkg) {
 
 export async function POST(request) {
   // console.log('Project activation request received');
-  
+
   // Log the incoming request
   await createInternalLog({
     message: 'Project activation request received',
@@ -142,13 +142,13 @@ export async function POST(request) {
       client_ip: request.headers.get('x-forwarded-for') || 'unknown'
     }
   });
-  
+
   try {
     // Parse the request body
     const body = await request.json();
     // Accept both host_ip and client_ip for compatibility
     const { activation_key, host_ip, client_ip, secure_token } = body;
-    
+
     // Use host_ip if provided, otherwise fallback to client_ip
     const ip_address = host_ip || client_ip;
 
@@ -167,12 +167,12 @@ export async function POST(request) {
         ip_address: !!ip_address,
         secure_token: !!secure_token
       });
-      
+
       const errorResponse = {
         success: false,
         error: 'Missing required fields: activation_key, host_ip/client_ip, secure_token'
       };
-      
+
       await createInternalLog({
         message: 'Missing required fields',
         action: 'project_activation_error',
@@ -186,33 +186,33 @@ export async function POST(request) {
           }
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 400 });
     }
 
     // Parse and validate the secure token
     const tokenData = parseSecureToken(secure_token, ip_address);
-    
+
     if (!tokenData) {
       console.error('Invalid secure token format');
-      
+
       const errorResponse = {
         success: false,
         error: 'Invalid secure token format'
       };
-      
+
       await createInternalLog({
         message: 'Invalid secure token format',
         action: 'project_activation_error',
         severity: 3,
         status_code: 400
       });
-      
+
       return NextResponse.json(errorResponse, { status: 400 });
     }
 
     const { activationKey, secret, ip } = tokenData;
-    
+
     // Normalize IPs for comparison
     const normalizedTokenIp = normalizeIpAddress(ip);
     const normalizedClientIp = normalizeIpAddress(ip_address);
@@ -232,12 +232,12 @@ export async function POST(request) {
         provided: activation_key,
         extracted: activationKey
       });
-      
+
       const errorResponse = {
         success: false,
         error: 'Activation key mismatch'
       };
-      
+
       await createInternalLog({
         message: 'Activation key mismatch',
         action: 'project_activation_error',
@@ -248,7 +248,7 @@ export async function POST(request) {
           extracted: activationKey
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 401 });
     }
 
@@ -256,19 +256,19 @@ export async function POST(request) {
     const expectedSecret = process.env.PROJECT_VALIDATION_SECRET || 'I3UYA2HSQPB86XpsdVUb9szDu5tn2W3fOpg8';
     if (secret !== expectedSecret) {
       console.error('Secret mismatch');
-      
+
       const errorResponse = {
         success: false,
         error: 'Invalid validation secret'
       };
-      
+
       await createInternalLog({
         message: 'Invalid validation secret',
         action: 'project_activation_error',
         severity: 3,
         status_code: 401
       });
-      
+
       return NextResponse.json(errorResponse, { status: 401 });
     }
 
@@ -280,7 +280,7 @@ export async function POST(request) {
         tokenIp: ip,
         normalizedTokenIp: normalizedTokenIp
       });
-      
+
       // Log IP mismatch but don't reject the request for now
       await createInternalLog({
         message: 'IP mismatch warning',
@@ -312,12 +312,12 @@ export async function POST(request) {
 
     if (!project) {
       console.log('Project not found for activation key:', activation_key);
-      
+
       const errorResponse = {
         success: false,
         error: 'Invalid activation key - project not found'
       };
-      
+
       await createInternalLog({
         message: 'Invalid activation key - project not found',
         action: 'project_activation_error',
@@ -327,7 +327,7 @@ export async function POST(request) {
           activation_key: activation_key
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 404 });
     }
 
@@ -344,9 +344,9 @@ export async function POST(request) {
     // });
 
     // Check if project is already registered (has logger_ip)
-    if (project.logger_ip ) {
+    if (project.logger_ip) {
       console.log('Project already registered:', project.id);
-      
+
       const successResponse = {
         success: true,
         message: 'Activation key already registered',
@@ -355,7 +355,7 @@ export async function POST(request) {
           activation_key: project.activation_key
         }
       };
-      
+
       await createInternalLog({
         message: 'Project already registered',
         action: 'project_activation_success',
@@ -367,19 +367,19 @@ export async function POST(request) {
           activation_key: project.activation_key
         }
       });
-      
+
       return NextResponse.json(successResponse, { status: 200 });
     }
 
     // Check if project is enabled
     if (!project.status) {
       console.log('Project is disabled:', project.id);
-      
+
       const errorResponse = {
         success: false,
         error: 'Project is disabled'
       };
-      
+
       await createInternalLog({
         message: 'Project is disabled',
         action: 'project_activation_error',
@@ -390,19 +390,19 @@ export async function POST(request) {
           project_id: project.id
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 403 });
     }
 
     // Check if project has valid package
     if (!project.packages) {
       console.log('Project has no assigned package:', project.id);
-      
+
       const errorResponse = {
         success: false,
         error: 'Project has no assigned package'
       };
-      
+
       await createInternalLog({
         message: 'Project has no assigned package',
         action: 'project_activation_error',
@@ -413,7 +413,7 @@ export async function POST(request) {
           project_id: project.id
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 400 });
     }
 
@@ -432,37 +432,47 @@ export async function POST(request) {
     if (project.type === 1) {
       // Cloud project type
       console.log('Processing cloud project:', project.id);
-      console.log('Available Project dara:', project);
-      
-      // Update the logger_ip with the received IP
-      await prisma.projects.update({
-        where: {
-          id: project.id
-        },
-        data: {
-          logger_ip: normalizedHostIp,
-          updated_at: new Date()
-        }
+
+      // Look up analyzer ID based on IP
+      const analyzerStr = await prisma.analyzers.findFirst({
+        where: { ip: normalizedHostIp }
       });
-      
-      // console.log('Cloud project updated with logger_ip:', {
-      //   projectId: project.id,
-      //   loggerIp: normalizedHostIp
-      // });
-      
+
+      if (analyzerStr) {
+        // Update the logger_ip with the analyzer ID
+        await prisma.projects.update({
+          where: { id: project.id },
+          data: {
+            logger_ip: analyzerStr.id,
+            updated_at: new Date()
+          }
+        });
+      } else {
+        console.warn('Analyzer not found for IP:', normalizedHostIp);
+        // Log warning but maybe don't fail activation? Or fail? 
+        // For now, let's log it. The schema is Int, so we CANNOT save the IP string.
+        await createInternalLog({
+          message: 'Analyzer not found for IP during activation',
+          action: 'project_activation_warning',
+          severity: 2,
+          status_code: 200,
+          additional_data: { ip: normalizedHostIp, project_id: project.id }
+        });
+      }
+
       // Calculate project end date
       const projectEndDate = calculateProjectEndDate(project.created_at, project.packages);
-      
+
       // Prepare response data
       const responseData = {
         success: true,
         message: 'Project activated successfully',
         data: {
           company_name: companyName,
-          collector_ip: project.collector ? project.collector.ip : null, // Return collector IP address instead of ID
+          collector_ip: project.collector ? project.collector.ip : null,
           collector_ip_address: project.collector ? project.collector.ip : null,
           collector_secret: project.collector ? project.collector.secret_key : null,
-          port: project.port ? project.port.port : null, // Return actual port value instead of ID
+          port: project.port ? project.port.port : null,
           package_name: project.packages.name,
           log_quota: project.packages.log_count,
           device_count: project.packages.device_count,
@@ -470,9 +480,6 @@ export async function POST(request) {
         }
       };
 
-
-      console.log('Cloud project data:', responseData);
-      
       await createInternalLog({
         message: 'Cloud project activated successfully',
         action: 'project_activation_success',
@@ -484,33 +491,41 @@ export async function POST(request) {
           logger_ip: normalizedHostIp
         }
       });
-      
+
       return NextResponse.json(responseData, { status: 200 });
     } else if (project.type === 2) {
       // On-prem project type
       console.log('Processing on-prem project:', project.id);
-      
-      // For on-prem projects, we update the logger_ip with the received IP
-      // and leave collector_ip as null (no collector relation)
-      await prisma.projects.update({
-        where: {
-          id: project.id
-        },
-        data: {
-          logger_ip: normalizedHostIp,
-          updated_at: new Date()
-          // Note: collector_ip remains null for on-prem projects
-        }
+
+      // Look up analyzer ID based on IP
+      const analyzerStr = await prisma.analyzers.findFirst({
+        where: { ip: normalizedHostIp }
       });
-      
-      // console.log('On-prem project updated with logger_ip:', {
-      //   projectId: project.id,
-      //   loggerIp: normalizedHostIp
-      // });
-      
+
+      if (analyzerStr) {
+        // Update the logger_ip with the received IP
+        await prisma.projects.update({
+          where: { id: project.id },
+          data: {
+            logger_ip: analyzerStr.id,
+            updated_at: new Date()
+            // Note: collector_ip remains null for on-prem projects
+          }
+        });
+      } else {
+        console.warn('Analyzer not found for IP (on-prem):', normalizedHostIp);
+        await createInternalLog({
+          message: 'Analyzer not found for IP during activation (on-prem)',
+          action: 'project_activation_warning',
+          severity: 2,
+          status_code: 200,
+          additional_data: { ip: normalizedHostIp, project_id: project.id }
+        });
+      }
+
       // Calculate project end date
       const projectEndDate = calculateProjectEndDate(project.created_at, project.packages);
-      
+
       // Prepare response data
       const responseData = {
         success: true,
@@ -528,7 +543,7 @@ export async function POST(request) {
       };
 
       console.log('On-prem project data:', responseData);
-      
+
       await createInternalLog({
         message: 'On-prem project activated successfully',
         action: 'project_activation_success',
@@ -540,17 +555,17 @@ export async function POST(request) {
           logger_ip: normalizedHostIp
         }
       });
-      
+
       return NextResponse.json(responseData, { status: 200 });
     } else {
       // Unknown project type
       console.log('Unknown project type:', project.type);
-      
+
       const errorResponse = {
         success: false,
         error: 'Unknown project type'
       };
-      
+
       await createInternalLog({
         message: 'Unknown project type',
         action: 'project_activation_error',
@@ -562,12 +577,12 @@ export async function POST(request) {
           project_type: project.type
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 400 });
     }
   } catch (error) {
     console.error('Error activating project:', error);
-    
+
     await createInternalLog({
       message: 'Internal server error during project activation',
       action: 'project_activation_error',
@@ -578,7 +593,7 @@ export async function POST(request) {
         stack: error.stack
       }
     });
-    
+
     return NextResponse.json({
       success: false,
       error: 'Internal server error'

@@ -22,7 +22,7 @@ function normalizeIpAddress(ip) {
     // Extract the IPv4 part
     return ip.substring(7); // Remove '::ffff:' prefix
   }
-  
+
   // For other IPv6 addresses, return as is
   // For IPv4 addresses, return as is
   return ip;
@@ -38,7 +38,7 @@ function normalizeIpAddress(ip) {
 function extractIpFromToken(decodedToken, clientIp) {
   // Normalize the client IP for comparison
   const normalizedClientIp = normalizeIpAddress(clientIp);
-  
+
   // Try different IP formats that might be in the token
   const possibleIpFormats = [
     `:${clientIp}`,           // Exact match
@@ -46,7 +46,7 @@ function extractIpFromToken(decodedToken, clientIp) {
     `:ffff:${clientIp}`,      // IPv4-mapped format
     `:ffff:${normalizedClientIp}` // Normalized IPv4-mapped format
   ];
-  
+
   // Try to find any of these formats in the token
   for (const ipFormat of possibleIpFormats) {
     const index = decodedToken.lastIndexOf(ipFormat);
@@ -56,7 +56,7 @@ function extractIpFromToken(decodedToken, clientIp) {
       return { extractedIp, restOfToken, ipFormatFound: ipFormat };
     }
   }
-  
+
   // Fallback: try to extract IP from the end of the token
   const lastColonIndex = decodedToken.lastIndexOf(':');
   if (lastColonIndex !== -1 && lastColonIndex < decodedToken.length - 1) {
@@ -64,7 +64,7 @@ function extractIpFromToken(decodedToken, clientIp) {
     const restOfToken = decodedToken.substring(0, lastColonIndex);
     return { extractedIp, restOfToken, ipFormatFound: 'fallback' };
   }
-  
+
   // If we can't extract IP, return null
   return null;
 }
@@ -80,19 +80,19 @@ function calculatePackageEndDate(pkg) {
   if (pkg.end_date) {
     return pkg.end_date;
   }
-  
+
   // Otherwise, calculate based on duration and created_at
   // Duration is in days (based on the schema)
   const createdDate = new Date(pkg.created_at);
   const endDate = new Date(createdDate);
   endDate.setDate(endDate.getDate() + pkg.duration);
-  
+
   return endDate.toISOString();
 }
 
 export async function POST(request) {
   console.log('Project validation request received:', request);
-  
+
   // Log the incoming request
   await createInternalLog({
     message: 'Project validation request received',
@@ -105,7 +105,7 @@ export async function POST(request) {
       client_ip: request.headers.get('x-forwarded-for') || 'unknown'
     }
   });
-  
+
   try {
     // Parse the request body
     const body = await request.json();
@@ -125,12 +125,12 @@ export async function POST(request) {
         secure_token: !!secure_token,
         client_ip: !!client_ip
       });
-      
+
       const errorResponse = {
         success: false,
         error: 'Missing required fields: activation_key, secure_token, client_ip'
       };
-      
+
       await createInternalLog({
         message: 'Missing required fields',
         action: 'project_validation_error',
@@ -144,7 +144,7 @@ export async function POST(request) {
           }
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 400 });
     }
 
@@ -155,12 +155,12 @@ export async function POST(request) {
       console.log('Decoded token:', decodedToken);
     } catch (decodeError) {
       console.error('Token decode error:', decodeError);
-      
+
       const errorResponse = {
         success: false,
         error: 'Invalid secure token format'
       };
-      
+
       await createInternalLog({
         message: 'Invalid secure token format',
         action: 'project_validation_error',
@@ -170,7 +170,7 @@ export async function POST(request) {
           error: decodeError.message
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 400 });
     }
 
@@ -178,47 +178,47 @@ export async function POST(request) {
     // The token format is: activationKey:secret:ip
     // Handle both IPv4 and IPv6 addresses correctly
     const ipExtractionResult = extractIpFromToken(decodedToken, client_ip);
-    
+
     if (!ipExtractionResult) {
       console.error('Could not extract IP from token');
-      
+
       const errorResponse = {
         success: false,
         error: 'Invalid token structure - could not extract IP'
       };
-      
+
       await createInternalLog({
         message: 'Invalid token structure - could not extract IP',
         action: 'project_validation_error',
         severity: 3,
         status_code: 400
       });
-      
+
       return NextResponse.json(errorResponse, { status: 400 });
     }
-    
+
     const { extractedIp, restOfToken } = ipExtractionResult;
-    
+
     // Find the first colon to separate activation key from secret
     const firstColonIndex = restOfToken.indexOf(':');
     if (firstColonIndex === -1) {
       console.error('Invalid token structure - missing key/secret delimiter');
-      
+
       const errorResponse = {
         success: false,
         error: 'Invalid token structure'
       };
-      
+
       await createInternalLog({
         message: 'Invalid token structure - missing key/secret delimiter',
         action: 'project_validation_error',
         severity: 3,
         status_code: 400
       });
-      
+
       return NextResponse.json(errorResponse, { status: 400 });
     }
-    
+
     // Extract activation key and secret
     const extractedActivationKey = restOfToken.substring(0, firstColonIndex);
     const extractedSecret = restOfToken.substring(firstColonIndex + 1);
@@ -242,12 +242,12 @@ export async function POST(request) {
         provided: activation_key,
         extracted: extractedActivationKey
       });
-      
+
       const errorResponse = {
         success: false,
         error: 'Activation key mismatch'
       };
-      
+
       await createInternalLog({
         message: 'Activation key mismatch',
         action: 'project_validation_error',
@@ -258,7 +258,7 @@ export async function POST(request) {
           extracted: extractedActivationKey
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 401 });
     }
 
@@ -266,19 +266,19 @@ export async function POST(request) {
     const expectedSecret = process.env.PROJECT_VALIDATION_SECRET || 'I3UYA2HSQPB86XpsdVUb9szDu5tn2W3fOpg8';
     if (extractedSecret !== expectedSecret) {
       console.error('Secret mismatch');
-      
+
       const errorResponse = {
         success: false,
         error: 'Invalid validation secret'
       };
-      
+
       await createInternalLog({
         message: 'Invalid validation secret',
         action: 'project_validation_error',
         severity: 3,
         status_code: 401
       });
-      
+
       return NextResponse.json(errorResponse, { status: 401 });
     }
 
@@ -290,7 +290,7 @@ export async function POST(request) {
         extracted: extractedIp,
         normalizedExtracted: normalizedExtractedIp
       });
-      
+
       // Log IP mismatch but don't reject the request
       await createInternalLog({
         message: 'IP mismatch warning',
@@ -304,7 +304,7 @@ export async function POST(request) {
           normalizedExtracted: normalizedExtractedIp
         }
       });
-      
+
       // You might want to allow this or reject based on your security requirements
     }
 
@@ -322,12 +322,12 @@ export async function POST(request) {
 
     if (!project) {
       console.log('Project not found for activation key:', activation_key);
-      
+
       const errorResponse = {
         success: false,
         error: 'Invalid activation key - project not found'
       };
-      
+
       await createInternalLog({
         message: 'Invalid activation key - project not found',
         action: 'project_validation_error',
@@ -337,7 +337,7 @@ export async function POST(request) {
           activation_key: activation_key
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 404 });
     }
 
@@ -354,12 +354,12 @@ export async function POST(request) {
     // Check if project is active
     if (!project.status) {
       console.log('Project is deactivated:', project.id);
-      
+
       const errorResponse = {
         success: false,
         error: 'Project is deactivated'
       };
-      
+
       await createInternalLog({
         message: 'Project is deactivated',
         action: 'project_validation_error',
@@ -370,19 +370,19 @@ export async function POST(request) {
           project_id: project.id
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 403 });
     }
 
     // Check if project has valid package
     if (!project.packages) {
       console.log('Project has no assigned package:', project.id);
-      
+
       const errorResponse = {
         success: false,
         error: 'Project has no assigned package'
       };
-      
+
       await createInternalLog({
         message: 'Project has no assigned package',
         action: 'project_validation_error',
@@ -393,26 +393,26 @@ export async function POST(request) {
           project_id: project.id
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 400 });
     }
 
     // Check package validity period
     const currentDate = new Date();
     const packageEndDate = new Date(calculatePackageEndDate(project.packages));
-    
+
     if (packageEndDate < currentDate) {
       console.log('Project package has expired:', {
         projectId: project.id,
         endDate: calculatePackageEndDate(project.packages),
         currentDate: currentDate
       });
-      
+
       const errorResponse = {
         success: false,
         error: 'Project package has expired'
       };
-      
+
       await createInternalLog({
         message: 'Project package has expired',
         action: 'project_validation_error',
@@ -425,7 +425,7 @@ export async function POST(request) {
           current_date: currentDate
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 403 });
     }
 
@@ -436,13 +436,13 @@ export async function POST(request) {
         expectedPort: project.port.port,
         providedPort: port
       });
-      
+
       const errorResponse = {
         success: false,
         error: `Port mismatch - expected ${project.port.port}, got ${port}`,
         userMessage: `The port ${port} does not match the assigned port ${project.port.port} for this activation key. Please use the correct port.`
       };
-      
+
       await createInternalLog({
         message: 'Port mismatch',
         action: 'project_validation_error',
@@ -455,22 +455,37 @@ export async function POST(request) {
           provided_port: port
         }
       });
-      
+
       return NextResponse.json(errorResponse, { status: 400 });
     }
 
     console.log('All validations passed, updating project:', project.id);
 
-    // Update the project with logger_ip (using the normalized IP)
-    await prisma.projects.update({
-      where: {
-        id: project.id
-      },
-      data: {
-        logger_ip: normalizedClientIp,
-        updated_at: new Date()
-      }
+    // Look up analyzer ID based on IP
+    const analyzerStr = await prisma.analyzers.findFirst({
+      where: { ip: normalizedClientIp }
     });
+
+    if (analyzerStr) {
+      // Update the project with logger_ip (using the ID)
+      await prisma.projects.update({
+        where: { id: project.id },
+        data: {
+          logger_ip: analyzerStr.id,
+          updated_at: new Date()
+        }
+      });
+    } else {
+      console.warn('Analyzer not found for IP during validation:', normalizedClientIp);
+      // Do not fail, but log it. Data won't be saved to logger_ip.
+      await createInternalLog({
+        message: 'Analyzer not found for IP during validation',
+        action: 'project_validation_warning',
+        severity: 2,
+        status_code: 200,
+        additional_data: { ip: normalizedClientIp, project_id: project.id }
+      });
+    }
 
     console.log('Data successfully validated and inserted for project:', {
       projectId: project.id,
@@ -510,14 +525,14 @@ export async function POST(request) {
         }] : []
       }
     };
-    
+
     console.log('Returning response:', responseData);
-    
+
     return NextResponse.json(responseData, { status: 200 });
 
   } catch (error) {
     console.error('Error validating project:', error);
-    
+
     await createInternalLog({
       message: 'Internal server error during project validation',
       action: 'project_validation_error',
@@ -528,7 +543,7 @@ export async function POST(request) {
         stack: error.stack
       }
     });
-    
+
     return NextResponse.json({
       success: false,
       error: 'Internal server error'
