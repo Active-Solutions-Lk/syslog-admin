@@ -434,29 +434,59 @@ export async function POST(request) {
       console.log('Processing cloud project:', project.id);
 
       // Look up analyzer ID based on IP
-      const analyzerStr = await prisma.analyzers.findFirst({
+      let analyzer = await prisma.analyzers.findFirst({
         where: { ip: normalizedHostIp }
       });
 
-      if (analyzerStr) {
+      // If analyzer not found, create it
+      if (!analyzer) {
+        console.log('Analyzer not found, creating new analyzer for IP:', normalizedHostIp);
+        try {
+          analyzer = await prisma.analyzers.create({
+            data: {
+              name: `Analyzer ${normalizedHostIp}`,
+              ip: normalizedHostIp,
+              status: 1, // Active by default
+              created_at: new Date(),
+              updated_at: new Date()
+            }
+          });
+
+          await createInternalLog({
+            message: 'New analyzer auto-registered during activation',
+            action: 'analyzer_auto_creation',
+            severity: 1,
+            status_code: 201,
+            additional_data: {
+              ip: normalizedHostIp,
+              analyzer_id: analyzer.id,
+              project_id: project.id
+            }
+          });
+        } catch (analyzerError) {
+          console.error('Failed to create analyzer:', analyzerError);
+          // Fallback to warning if creation fails
+          await createInternalLog({
+            message: 'Failed to auto-register analyzer',
+            action: 'project_activation_error',
+            severity: 3,
+            status_code: 500,
+            additional_data: {
+              ip: normalizedHostIp,
+              error: analyzerError.message
+            }
+          });
+        }
+      }
+
+      if (analyzer) {
         // Update the logger_ip with the analyzer ID
         await prisma.projects.update({
           where: { id: project.id },
           data: {
-            logger_ip: analyzerStr.id,
+            logger_ip: analyzer.id,
             updated_at: new Date()
           }
-        });
-      } else {
-        console.warn('Analyzer not found for IP:', normalizedHostIp);
-        // Log warning but maybe don't fail activation? Or fail? 
-        // For now, let's log it. The schema is Int, so we CANNOT save the IP string.
-        await createInternalLog({
-          message: 'Analyzer not found for IP during activation',
-          action: 'project_activation_warning',
-          severity: 2,
-          status_code: 200,
-          additional_data: { ip: normalizedHostIp, project_id: project.id }
         });
       }
 
@@ -498,28 +528,59 @@ export async function POST(request) {
       console.log('Processing on-prem project:', project.id);
 
       // Look up analyzer ID based on IP
-      const analyzerStr = await prisma.analyzers.findFirst({
+      let analyzer = await prisma.analyzers.findFirst({
         where: { ip: normalizedHostIp }
       });
 
-      if (analyzerStr) {
+      // If analyzer not found, create it
+      if (!analyzer) {
+        console.log('Analyzer not found (on-prem), creating new analyzer for IP:', normalizedHostIp);
+        try {
+          analyzer = await prisma.analyzers.create({
+            data: {
+              name: `Analyzer ${normalizedHostIp}`,
+              ip: normalizedHostIp,
+              status: 1, // Active by default
+              created_at: new Date(),
+              updated_at: new Date()
+            }
+          });
+
+          await createInternalLog({
+            message: 'New analyzer auto-registered during activation (on-prem)',
+            action: 'analyzer_auto_creation',
+            severity: 1,
+            status_code: 201,
+            additional_data: {
+              ip: normalizedHostIp,
+              analyzer_id: analyzer.id,
+              project_id: project.id
+            }
+          });
+        } catch (analyzerError) {
+          console.error('Failed to create analyzer:', analyzerError);
+          await createInternalLog({
+            message: 'Failed to auto-register analyzer (on-prem)',
+            action: 'project_activation_error',
+            severity: 3,
+            status_code: 500,
+            additional_data: {
+              ip: normalizedHostIp,
+              error: analyzerError.message
+            }
+          });
+        }
+      }
+
+      if (analyzer) {
         // Update the logger_ip with the received IP
         await prisma.projects.update({
           where: { id: project.id },
           data: {
-            logger_ip: analyzerStr.id,
+            logger_ip: analyzer.id,
             updated_at: new Date()
             // Note: collector_ip remains null for on-prem projects
           }
-        });
-      } else {
-        console.warn('Analyzer not found for IP (on-prem):', normalizedHostIp);
-        await createInternalLog({
-          message: 'Analyzer not found for IP during activation (on-prem)',
-          action: 'project_activation_warning',
-          severity: 2,
-          status_code: 200,
-          additional_data: { ip: normalizedHostIp, project_id: project.id }
         });
       }
 
