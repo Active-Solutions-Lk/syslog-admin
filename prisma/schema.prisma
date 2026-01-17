@@ -61,7 +61,7 @@ model projects {
   pkg_id          Int
   admin_id        Int?
   collector_ip    Int?
-  logger_ip       String?       @db.VarChar(50)
+  logger_ip       Int?
   reseller_id     Int?
   created_at      DateTime      @default(now()) @db.Timestamp(0)
   updated_at      DateTime      @default(now()) @db.Timestamp(0)
@@ -75,6 +75,7 @@ model projects {
   api_logs        api_logs[]
   admins          admins?       @relation(fields: [admin_id], references: [id], onDelete: Cascade, map: "fk_admin_id_admins_id")
   collector       collectors?   @relation(fields: [collector_ip], references: [id], map: "fk_collector_ip_collectors_id")
+  logger          analyzers?    @relation(fields: [logger_ip], references: [id], map: "fk_logger_ip_logger_id")
   end_customer    end_customer? @relation(fields: [end_customer_id], references: [id], onDelete: Cascade, map: "fk_end_customer_id")
   packages        packages      @relation(fields: [pkg_id], references: [id], onDelete: Cascade, map: "fk_pkgid_package")
   port            ports?        @relation(fields: [port_id], references: [id], map: "fk_port_id_with_ports_id")
@@ -89,6 +90,7 @@ model projects {
   @@index([port_id], map: "port_id")
   @@index([type], map: "fk_project_type_id_idx")
   @@index([collector_ip], map: "fk_collector_ip_collectors_id_idx")
+  @@index([logger_ip], map: "fk_logger_ip_logger_id_idx")
 }
 
 model reseller {
@@ -152,13 +154,14 @@ model collectors {
 }
 
 model analyzers {
-  id         Int      @id @default(autoincrement())
-  name       String?  @db.VarChar(50)
-  ip         String   @db.VarChar(50)
-  domain     String?  @db.VarChar(50)
-  status     Int      @db.TinyInt
-  created_at DateTime @default(now()) @db.Timestamp(0)
-  updated_at DateTime @default(now()) @db.Timestamp(0)
+  id         Int        @id @default(autoincrement())
+  name       String?    @db.VarChar(50)
+  ip         String     @db.VarChar(50)
+  domain     String?    @db.VarChar(50)
+  status     Int        @db.TinyInt
+  created_at DateTime   @default(now()) @db.Timestamp(0)
+  updated_at DateTime   @default(now()) @db.Timestamp(0)
+  projects   projects[]
 }
 
 model api_logs {

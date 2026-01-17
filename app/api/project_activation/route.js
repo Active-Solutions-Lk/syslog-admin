@@ -343,8 +343,8 @@ export async function POST(request) {
     //   hasReseller: !!project.reseller
     // });
 
-    // Check if project is already registered (has logger_ip and either reseller or end_customer)
-    if (project.logger_ip && (project.end_customer_id || project.reseller_id)) {
+    // Check if project is already registered (has logger_ip)
+    if (project.logger_ip ) {
       console.log('Project already registered:', project.id);
       
       const successResponse = {
