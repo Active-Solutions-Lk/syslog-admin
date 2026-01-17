@@ -560,6 +560,7 @@ export async function createProject({
       port_id: project.port_id ? project.port_id.toString() : null,
       end_customer_id: project.end_customer_id ? project.end_customer_id.toString() : null,
       collector_ip: project.collector_ip ? project.collector_ip.toString() : null,
+      logger_ip: project.logger_ip ? project.logger_ip.toString() : null,
       type: project.type.toString(),
       status: project.status,
     };
@@ -718,6 +719,7 @@ export async function updateProject({
       port_id: project.port_id ? project.port_id.toString() : null,
       end_customer_id: project.end_customer_id ? project.end_customer_id.toString() : null,
       collector_ip: project.collector_ip ? project.collector_ip.toString() : null,
+      logger_ip: project.logger_ip ? project.logger_ip.toString() : null,
       type: project.type.toString(),
       status: project.status,
     };
@@ -806,6 +808,7 @@ export async function updateProjectStatus(id, status) {
       reseller_id: project.reseller_id ? project.reseller_id.toString() : null,
       port_id: project.port_id ? project.port_id.toString() : null,
       end_customer_id: project.end_customer_id ? project.end_customer_id.toString() : null,
+      logger_ip: project.logger_ip ? project.logger_ip.toString() : null,
       status: project.status,
     };
 
