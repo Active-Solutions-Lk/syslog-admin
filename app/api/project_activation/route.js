@@ -113,17 +113,11 @@ function parseSecureToken(secureToken, clientIp) {
   }
 }
 
-/**
- * Helper function to calculate project end date
- * Based on the project start date and package duration
- * @param {Date} startDate - The project start date
- * @param {object} pkg - The package object from the database
- * @returns {Date} - The calculated end date
- */
 function calculateProjectEndDate(startDate, pkg) {
-  // Duration is in days (based on the schema)
+  // project_duration is in days (based on the schema)
+  const durationDays = parseInt(pkg.project_duration) || 0;
   const endDate = new Date(startDate);
-  endDate.setDate(endDate.getDate() + Math.floor(pkg.duration));
+  endDate.setDate(endDate.getDate() + durationDays);
   return endDate;
 }
 

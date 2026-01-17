@@ -12,11 +12,11 @@ model internal_log {
   related_table    String?  @db.VarChar(100)
   related_table_id Int?
   severity         Int
-  message          String   @db.VarChar(100)
+  message          String   @db.VarChar(500)
   admin_id         Int?
   action           String   @db.VarChar(100)
   status_code      Int
-  additional_data  String?  @db.VarChar(100)
+  additional_data  String?  @db.Text
   created_at       DateTime @default(now()) @db.Timestamp(0)
   updated_at       DateTime @default(now()) @db.Timestamp(0)
 }

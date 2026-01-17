@@ -69,23 +69,12 @@ function extractIpFromToken(decodedToken, clientIp) {
   return null;
 }
 
-/**
- * Helper function to calculate package end date
- * Based on the package duration and project creation date
- * @param {object} pkg - The package object from the database
- * @returns {string} - The calculated end date in ISO format
- */
-function calculatePackageEndDate(pkg) {
-  // If the package has an explicit end_date field, use it
-  if (pkg.end_date) {
-    return pkg.end_date;
-  }
-
-  // Otherwise, calculate based on duration and created_at
-  // Duration is in days (based on the schema)
-  const createdDate = new Date(pkg.created_at);
-  const endDate = new Date(createdDate);
-  endDate.setDate(endDate.getDate() + pkg.duration);
+function calculatePackageEndDate(startDate, pkg) {
+  // project_duration is in days (based on the schema)
+  const durationDays = parseInt(pkg.project_duration) || 0;
+  const createdAt = new Date(startDate);
+  const endDate = new Date(createdAt);
+  endDate.setDate(endDate.getDate() + durationDays);
 
   return endDate.toISOString();
 }
@@ -399,7 +388,7 @@ export async function POST(request) {
 
     // Check package validity period
     const currentDate = new Date();
-    const packageEndDate = new Date(calculatePackageEndDate(project.packages));
+    const packageEndDate = new Date(calculatePackageEndDate(project.created_at, project.packages));
 
     if (packageEndDate < currentDate) {
       console.log('Project package has expired:', {
@@ -517,7 +506,7 @@ export async function POST(request) {
         port: project.port ? project.port.port : null,
         log_quota: project.packages.log_count,
         device_count: project.packages.device_count,
-        pkg_ending_date: calculatePackageEndDate(project.packages),
+        pkg_ending_date: calculatePackageEndDate(project.created_at, project.packages),
         company_name: project.end_customer ? project.end_customer.company : null,
         ports: project.port ? [{
           id: project.port.id,
