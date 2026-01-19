@@ -254,6 +254,8 @@ export async function getProjects() {
         end_customer_id: true,
         type: true,
         status: true,
+        is_active_coll: true,
+        is_active_an: true,
         created_at: true,
         updated_at: true,
         admins: {
@@ -307,6 +309,8 @@ export async function getProjects() {
       collector_ip: project.collector_ip ? project.collector_ip.toString() : null, // Convert to string
       logger_ip: project.logger_ip ? project.logger_ip.toString() : null, // Convert to string
       type: project.type.toString(),
+      is_active_coll: project.is_active_coll,
+      is_active_an: project.is_active_an,
       port: project.port ? { port: project.port.port } : null,
       project_type: project.project_type ? { name: project.project_type.name } : null,
     }));
@@ -344,6 +348,8 @@ export async function getProjectById(id) {
         end_customer_id: true,
         type: true,
         status: true,
+        is_active_coll: true,
+        is_active_an: true,
         created_at: true,
         updated_at: true,
         admins: {
@@ -405,6 +411,8 @@ export async function getProjectById(id) {
       logger_ip: project.logger_ip ? project.logger_ip.toString() : null, // Convert to string
       type: project.type.toString(),
       status: project.status,
+      is_active_coll: project.is_active_coll,
+      is_active_an: project.is_active_an,
       port: project.port ? { port: project.port.port } : null,
       project_type: project.project_type ? { name: project.project_type.name } : null,
     };
@@ -432,7 +440,9 @@ export async function createProject({
   reseller_id,
   port_id,
   end_customer_id,
-  type
+  type,
+  is_active_coll,
+  is_active_an
 }) {
   try {
     // If a port is being assigned, check if it's already used by another project with the same collector
@@ -494,6 +504,8 @@ export async function createProject({
         port_id: port_id ? parseInt(port_id) : null,
         end_customer_id: end_customer_id ? parseInt(end_customer_id) : null,
         type: type ? parseInt(type) : 1,
+        is_active_coll: is_active_coll !== undefined ? parseInt(is_active_coll) : 1,
+        is_active_an: is_active_an !== undefined ? parseInt(is_active_an) : 1,
         status: true,
         created_at: now,
         updated_at: now,
@@ -511,6 +523,8 @@ export async function createProject({
         end_customer_id: true,
         type: true,
         status: true,
+        is_active_coll: true,
+        is_active_an: true,
         created_at: true,
         updated_at: true,
         admins: {
@@ -565,6 +579,8 @@ export async function createProject({
       logger_ip: project.logger_ip ? project.logger_ip.toString() : null,
       type: project.type.toString(),
       status: project.status,
+      is_active_coll: project.is_active_coll,
+      is_active_an: project.is_active_an,
     };
 
     return {
@@ -594,7 +610,9 @@ export async function updateProject({
   port_id,
   end_customer_id,
   type,
-  status
+  status,
+  is_active_coll,
+  is_active_an
 }) {
   try {
     // If a port is being assigned, check if it's already used by another project with the same collector
@@ -656,6 +674,8 @@ export async function updateProject({
         end_customer_id: end_customer_id ? parseInt(end_customer_id) : null,
         type: type ? parseInt(type) : undefined,
         status: status !== undefined ? status : undefined,
+        is_active_coll: is_active_coll !== undefined ? parseInt(is_active_coll) : undefined,
+        is_active_an: is_active_an !== undefined ? parseInt(is_active_an) : undefined,
         updated_at: now,
       },
       select: {
@@ -670,6 +690,8 @@ export async function updateProject({
         end_customer_id: true,
         type: true,
         status: true,
+        is_active_coll: true,
+        is_active_an: true,
         created_at: true,
         updated_at: true,
         admins: {
@@ -724,6 +746,8 @@ export async function updateProject({
       logger_ip: project.logger_ip ? project.logger_ip.toString() : null,
       type: project.type.toString(),
       status: project.status,
+      is_active_coll: project.is_active_coll,
+      is_active_an: project.is_active_an,
     };
 
     return {
@@ -770,6 +794,8 @@ export async function updateProjectStatus(id, status) {
         port_id: true,
         end_customer_id: true,
         status: true,
+        is_active_coll: true,
+        is_active_an: true,
         created_at: true,
         updated_at: true,
         admins: {
@@ -812,6 +838,8 @@ export async function updateProjectStatus(id, status) {
       end_customer_id: project.end_customer_id ? project.end_customer_id.toString() : null,
       logger_ip: project.logger_ip ? project.logger_ip.toString() : null,
       status: project.status,
+      is_active_coll: project.is_active_coll,
+      is_active_an: project.is_active_an,
     };
 
     return {

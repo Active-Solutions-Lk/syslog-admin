@@ -59,6 +59,8 @@ interface Project {
   end_customer_id?: string | null;
   type?: string;
   status?: boolean;
+  is_active_coll?: number;
+  is_active_an?: number;
   created_at?: Date;
   updated_at?: Date;
   admins?: {
@@ -140,6 +142,8 @@ export function ProjectDialog({
   const [end_customer_id, setEndCustomerId] = useState<string | null>(null);
   const [type, setType] = useState<string>("");
   const [status, setStatus] = useState<boolean>(true); // Default to enabled
+  const [is_active_coll_bool, setIsActiveCollBool] = useState<boolean>(true);
+  const [is_active_an_bool, setIsActiveAnBool] = useState<boolean>(true);
   const [activation_key, setActivationKey] = useState("");
   const [packages, setPackages] = useState<{ value: string; label: string }[]>(
     []
@@ -261,6 +265,8 @@ export function ProjectDialog({
             setEndCustomerId(project.end_customer_id || null);
             setType(project.type || "");
             setStatus(project.status !== undefined ? project.status : true);
+            setIsActiveCollBool(project.is_active_coll === 1);
+            setIsActiveAnBool(project.is_active_an === 1);
             setActivationKey(project.activation_key || "");
 
             // Fetch available ports for the project's collector IP
@@ -280,6 +286,8 @@ export function ProjectDialog({
             setEndCustomerId(null);
             setType("");
             setStatus(true); // Default to enabled for new projects
+            setIsActiveCollBool(true);
+            setIsActiveAnBool(true);
             // Generate a new activation key for new projects
             const newActivationKey = generateActivationKey();
             setActivationKey(newActivationKey);
@@ -309,7 +317,7 @@ export function ProjectDialog({
         console.log("Not fetching ports - open:", open, "collector_ip:", collector_ip, "project:", project);
       }
     };
-    
+
     fetchPorts();
   }, [open, collector_ip, project]);
 
@@ -325,14 +333,14 @@ export function ProjectDialog({
         "project ID:",
         projectId
       );
-      
+
       // Validate collectorId
       if (!collectorId) {
         console.log("No collector ID provided, clearing available ports");
         setAvailablePorts([]);
         return;
       }
-      
+
       const portsResult = await getAvailablePorts(collectorId);
       console.log("Ports result:", portsResult);
       let portOptions: { value: string; label: string }[] = [];
@@ -373,7 +381,7 @@ export function ProjectDialog({
 
       console.log("Setting available ports:", portOptions);
       setAvailablePorts(portOptions);
-      
+
       // Show a message if this is a non-default collector with restrictions
       if (portsResult.success && portsResult.isDefaultCollector === false) {
         console.log("This is a non-default collector with port restrictions");
@@ -399,6 +407,8 @@ export function ProjectDialog({
       end_customer_id,
       type,
       status,
+      is_active_coll: is_active_coll_bool ? 1 : 0,
+      is_active_an: is_active_an_bool ? 1 : 0,
       activation_key: activation_key || undefined,
       // secret_key is intentionally not included as it's only managed on the backend
     };
@@ -462,7 +472,7 @@ export function ProjectDialog({
                 />
               </div>
             </div>
-            
+
             {/* Combined row for Collector and Logger IP */}
             <div className="grid grid-cols-8 items-center gap-4">
               <Label htmlFor="collector" className="text-right col-span-1">
@@ -495,7 +505,7 @@ export function ProjectDialog({
                 />
               </div>
             </div>
-            
+
             {/* Combined row for Package and Admin */}
             <div className="grid grid-cols-8 items-center gap-4">
               <Label htmlFor="pkg_id" className="text-right col-span-1">
@@ -525,7 +535,7 @@ export function ProjectDialog({
                 />
               </div>
             </div>
-            
+
             {/* Combined row for Reseller and Port */}
             <div className="grid grid-cols-8 items-center gap-4">
               <Label htmlFor="reseller_id" className="text-right col-span-1">
@@ -557,7 +567,7 @@ export function ProjectDialog({
                 />
               </div>
             </div>
-            
+
             {/* Combined row for End Customer and Status */}
             <div className="grid grid-cols-8 items-center gap-4">
               <Label htmlFor="end_customer_id" className="text-right col-span-1">
@@ -585,6 +595,32 @@ export function ProjectDialog({
                   onCheckedChange={setStatus}
                 />
                 <span className="text-sm">{status ? "Enabled" : "Disabled"}</span>
+              </div>
+            </div>
+
+            {/* Row for Active Statuses */}
+            <div className="grid grid-cols-8 items-center gap-4">
+              <Label htmlFor="is_active_coll" className="text-right col-span-1">
+                Coll Active
+              </Label>
+              <div className="col-span-3 flex items-center gap-3">
+                <Switch
+                  id="is_active_coll"
+                  checked={is_active_coll_bool}
+                  onCheckedChange={setIsActiveCollBool}
+                />
+                <span className="text-sm">{is_active_coll_bool ? "Active" : "Inactive"}</span>
+              </div>
+              <Label htmlFor="is_active_an" className="text-right col-span-1">
+                Anly Active
+              </Label>
+              <div className="col-span-3 flex items-center gap-3">
+                <Switch
+                  id="is_active_an"
+                  checked={is_active_an_bool}
+                  onCheckedChange={setIsActiveAnBool}
+                />
+                <span className="text-sm">{is_active_an_bool ? "Active" : "Inactive"}</span>
               </div>
             </div>
           </div>

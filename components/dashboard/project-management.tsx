@@ -28,6 +28,8 @@ interface ProjectFromServer {
   end_customer_id: string | null;
   type: string;
   status: boolean;
+  is_active_coll: number;
+  is_active_an: number;
   created_at?: Date;
   updated_at?: Date;
   admins?: {
@@ -66,6 +68,8 @@ interface Project {
   end_customer_id?: string | null;
   type?: string;
   status?: boolean;
+  is_active_coll?: number;
+  is_active_an?: number;
   created_at?: Date;
   updated_at?: Date;
   admins?: {
@@ -144,7 +148,7 @@ export function ProjectManagement() {
 
   const handleDelete = async (project: Project) => {
     if (!project.id) return;
-    
+
     if (window.confirm(`Are you sure you want to delete project ${project.activation_key}?`)) {
       try {
         const result = await deleteProject(project.id);
@@ -170,11 +174,11 @@ export function ProjectManagement() {
 
   const handleStatusChange = React.useCallback(async (project: Project, newStatus: boolean) => {
     if (!project.id) return;
-    
+
     try {
       const result = await updateProjectStatus(project.id, newStatus);
       if (result.success) {
-        setProjects(projects.map(p => 
+        setProjects(projects.map(p =>
           p.id === project.id ? { ...p, status: newStatus } : p
         ));
       } else {
@@ -286,23 +290,23 @@ export function ProjectManagement() {
   const handleSaveProject = async (project: Project) => {
     try {
       let result: { success: boolean; project?: ProjectFromServer; error?: string };
-      
+
       if (project.id) {
         // Update existing project
-        const { id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, status } = project;
-        result = await updateProject({ id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, status });
+        const { id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, status, is_active_coll, is_active_an } = project;
+        result = await updateProject({ id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, status, is_active_coll, is_active_an });
         if (result.success) {
           setProjects(projects.map(p => p.id === project.id ? result.project! : p));
         }
       } else {
         // Add new project
-        const { collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type } = project;
-        result = await createProject({ collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type });
+        const { collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, is_active_coll, is_active_an } = project;
+        result = await createProject({ collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, is_active_coll, is_active_an });
         if (result.success) {
           setProjects([...projects, result.project!]);
         }
       }
-      
+
       if (result.success) {
         setIsDialogOpen(false);
         setEditingProject(null);
@@ -326,11 +330,11 @@ export function ProjectManagement() {
         <h1 className="text-2xl font-bold">Project Management</h1>
         {/* <Button onClick={handleAdd}>Add Project</Button> */}
       </div>
-      
+
       <div className="bg-white rounded-lg border-0">
-        <DataTable 
-          columns={columns} 
-          data={projects} 
+        <DataTable
+          columns={columns}
+          data={projects}
           onEdit={handleEdit}
           onAdd={handleAdd}
           onDelete={handleDelete}
@@ -345,7 +349,7 @@ export function ProjectManagement() {
         project={editingProject || undefined}
         onSave={handleSaveProject}
       />
-      
+
       {/* Advanced View: reuse API logs advanced dialog by activation key */}
       {viewingProject?.activation_key && (
         <ApiLogsAdvancedView
