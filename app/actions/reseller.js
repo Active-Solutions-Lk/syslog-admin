@@ -14,27 +14,23 @@ export async function getResellers() {
   try {
     const resellers = await prisma.reseller.findMany({
       select: {
-        customer_id: true,
-        company_name: true,
+        id: true,
+        company: true,
         address: true,
-        type: true,
-        credit_limit: true,
-        payment_terms: true,
-        note: true,
-        vat: true,
-        city: true,
+        contact_person: true,
+        tel: true,
+        email: true,
+        status: true,
         created_at: true,
         updated_at: true,
       },
     });
-    
-    // Convert customer_id to string for frontend
+
     const formattedResellers = resellers.map(reseller => ({
       ...reseller,
-      customer_id: reseller.customer_id.toString(),
-      city: reseller.city ? reseller.city.toString() : null,
+      id: reseller.id.toString(),
     }));
-    
+
     return {
       success: true,
       resellers: formattedResellers,
@@ -52,37 +48,33 @@ export async function getResellerById(id) {
   try {
     const reseller = await prisma.reseller.findUnique({
       where: {
-        customer_id: parseInt(id),
+        id: parseInt(id),
       },
       select: {
-        customer_id: true,
-        company_name: true,
+        id: true,
+        company: true,
         address: true,
-        type: true,
-        credit_limit: true,
-        payment_terms: true,
-        note: true,
-        vat: true,
-        city: true,
+        contact_person: true,
+        tel: true,
+        email: true,
+        status: true,
         created_at: true,
         updated_at: true,
       },
     });
-    
+
     if (!reseller) {
       return {
         success: false,
         error: 'Reseller not found',
       };
     }
-    
-    // Convert customer_id to string for frontend
+
     const formattedReseller = {
       ...reseller,
-      customer_id: reseller.customer_id.toString(),
-      city: reseller.city ? reseller.city.toString() : null,
+      id: reseller.id.toString(),
     };
-    
+
     return {
       success: true,
       reseller: formattedReseller,
@@ -96,73 +88,56 @@ export async function getResellerById(id) {
   }
 }
 
-export async function createReseller({ 
-  company_name, 
-  address, 
-  type, 
-  credit_limit, 
-  payment_terms, 
-  note, 
-  vat, 
-  city 
+export async function createReseller({
+  company,
+  address,
+  contact_person,
+  tel,
+  email,
+  status
 }) {
   try {
-    // Check if reseller with this company name already exists
-    const existingReseller = await prisma.reseller.findUnique({
+    const existingReseller = await prisma.reseller.findFirst({
       where: {
-        company_name,
+        company,
       },
     });
-    
+
     if (existingReseller) {
       return {
         success: false,
         error: 'Reseller with this company name already exists',
       };
     }
-    
-    // Get current date for timestamps
-    const now = new Date();
-    
-    // Create reseller
+
     const reseller = await prisma.reseller.create({
       data: {
-        company_name,
+        company,
         address: address || null,
-        type: type || 'Standard',
-        credit_limit: credit_limit || null,
-        payment_terms: payment_terms || null,
-        note: note || null,
-        vat: vat || null,
-        city: city ? parseInt(city) : null,
-        created_at: now,
-        updated_at: now,
+        contact_person,
+        tel,
+        email: email || null,
+        status: status === undefined ? true : Boolean(status),
       },
       select: {
-        customer_id: true,
-        company_name: true,
+        id: true,
+        company: true,
         address: true,
-        type: true,
-        credit_limit: true,
-        payment_terms: true,
-        note: true,
-        vat: true,
-        city: true,
+        contact_person: true,
+        tel: true,
+        email: true,
+        status: true,
         created_at: true,
         updated_at: true,
       },
     });
-    
-    // Convert customer_id to string for frontend
-    const formattedReseller = {
-      ...reseller,
-      customer_id: reseller.customer_id.toString(),
-      city: reseller.city ? reseller.city.toString() : null,
-    };
-    
+
     return {
       success: true,
-      reseller: formattedReseller,
+      reseller: {
+        ...reseller,
+        id: reseller.id.toString(),
+      },
       message: 'Reseller created successfully',
     };
   } catch (error) {
@@ -174,76 +149,48 @@ export async function createReseller({
   }
 }
 
-export async function updateReseller({ 
-  customer_id, 
-  company_name, 
-  address, 
-  type, 
-  credit_limit, 
-  payment_terms, 
-  note, 
-  vat, 
-  city 
+export async function updateReseller({
+  id,
+  company,
+  address,
+  contact_person,
+  tel,
+  email,
+  status
 }) {
   try {
-    // Check if another reseller with this company name already exists
-    const existingReseller = await prisma.reseller.findUnique({
-      where: {
-        company_name,
-      },
-    });
-    
-    if (existingReseller && existingReseller.customer_id !== parseInt(customer_id)) {
-      return {
-        success: false,
-        error: 'Another reseller with this company name already exists',
-      };
-    }
-    
-    // Get current date for updatedAt timestamp
-    const now = new Date();
-    
-    // Update reseller
     const reseller = await prisma.reseller.update({
       where: {
-        customer_id: parseInt(customer_id),
+        id: parseInt(id),
       },
       data: {
-        company_name,
+        company,
         address: address || null,
-        type: type || 'Standard',
-        credit_limit: credit_limit || null,
-        payment_terms: payment_terms || null,
-        note: note || null,
-        vat: vat || null,
-        city: city ? parseInt(city) : null,
-        updated_at: now,
+        contact_person,
+        tel,
+        email: email || null,
+        status: Boolean(status),
+        updated_at: new Date(),
       },
       select: {
-        customer_id: true,
-        company_name: true,
+        id: true,
+        company: true,
         address: true,
-        type: true,
-        credit_limit: true,
-        payment_terms: true,
-        note: true,
-        vat: true,
-        city: true,
+        contact_person: true,
+        tel: true,
+        email: true,
+        status: true,
         created_at: true,
         updated_at: true,
       },
     });
-    
-    // Convert customer_id to string for frontend
-    const formattedReseller = {
-      ...reseller,
-      customer_id: reseller.customer_id.toString(),
-      city: reseller.city ? reseller.city.toString() : null,
-    };
-    
+
     return {
       success: true,
-      reseller: formattedReseller,
+      reseller: {
+        ...reseller,
+        id: reseller.id.toString(),
+      },
       message: 'Reseller updated successfully',
     };
   } catch (error) {
@@ -261,15 +208,14 @@ export async function updateReseller({
   }
 }
 
-export async function deleteReseller(customer_id) {
+export async function deleteReseller(id) {
   try {
-    // Delete reseller
     await prisma.reseller.delete({
       where: {
-        customer_id: parseInt(customer_id),
+        id: parseInt(id),
       },
     });
-    
+
     return {
       success: true,
       message: 'Reseller deleted successfully',

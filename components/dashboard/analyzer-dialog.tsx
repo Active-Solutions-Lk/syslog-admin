@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -17,11 +16,9 @@ import { useState, useEffect } from "react";
 interface Analyzer {
   id?: string;
   name: string;
-  ip: string;
-  domain: string;
-  status: number;
-  created_at?: Date;
-  updated_at?: Date;
+  ip: string | null;
+  domain: string | null;
+  status: boolean;
 }
 
 interface AnalyzerDialogProps {
@@ -32,53 +29,33 @@ interface AnalyzerDialogProps {
 }
 
 export function AnalyzerDialog({ open, onOpenChange, analyzer, onSave }: AnalyzerDialogProps) {
-  const [name, setName] = useState<string>("");
-  const [ip, setIp] = useState<string>("");
-  const [domain, setDomain] = useState<string>("");
-  const [status, setStatus] = useState<number>(1);
+  const [name, setName] = useState("");
+  const [ip, setIp] = useState("");
+  const [domain, setDomain] = useState("");
+  const [status, setStatus] = useState(true);
 
-  // Reset form when dialog opens or analyzer changes
   useEffect(() => {
     if (open) {
       if (analyzer) {
         setName(analyzer.name || "");
         setIp(analyzer.ip || "");
         setDomain(analyzer.domain || "");
-        setStatus(analyzer.status ?? 1);
+        setStatus(analyzer.status ?? true);
       } else {
-        setName("");
-        setIp("");
-        setDomain("");
-        setStatus(1);
+        setName(""); setIp(""); setDomain(""); setStatus(true);
       }
     }
   }, [open, analyzer]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!name.trim()) {
-      alert("Please enter a name");
-      return;
-    }
-    
-    if (!ip.trim()) {
-      alert("Please enter an IP address");
-      return;
-    }
-    
-    const analyzerData: Analyzer = {
-      name: name.trim(),
-      ip: ip.trim(),
-      domain: domain.trim(),
-      status: status,
-    };
-    
-    if (analyzer?.id) {
-      analyzerData.id = analyzer.id;
-    }
-    
-    onSave(analyzerData);
+    onSave({
+      ...(analyzer?.id && { id: analyzer.id }),
+      name,
+      ip: ip || null,
+      domain: domain || null,
+      status
+    });
   };
 
   return (
@@ -87,70 +64,30 @@ export function AnalyzerDialog({ open, onOpenChange, analyzer, onSave }: Analyze
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{analyzer ? "Edit Analyzer" : "Add Analyzer"}</DialogTitle>
-            <DialogDescription>
-              {analyzer 
-                ? "Make changes to the analyzer here." 
-                : "Add a new analyzer here."}
-            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="col-span-3"
-                required
-              />
+              <Label className="text-right">Name</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" required />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="ip" className="text-right">
-                IP Address
-              </Label>
-              <Input
-                id="ip"
-                value={ip}
-                onChange={(e) => setIp(e.target.value)}
-                className="col-span-3"
-                placeholder="192.168.1.100"
-                required
-              />
+              <Label className="text-right">IP</Label>
+              <Input value={ip} onChange={(e) => setIp(e.target.value)} className="col-span-3" required />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="domain" className="text-right">
-                Domain
-              </Label>
-              <Input
-                id="domain"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                className="col-span-3"
-                placeholder="example.com"
-              />
+              <Label className="text-right">Domain</Label>
+              <Input value={domain} onChange={(e) => setDomain(e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="status" className="text-right">
-                Active
-              </Label>
-              <div className="col-span-3 flex items-center">
-                <Switch
-                  id="status"
-                  checked={status === 1}
-                  onCheckedChange={(checked) => setStatus(checked ? 1 : 0)}
-                />
+              <Label className="text-right">Active</Label>
+              <div className="col-span-3">
+                <Switch checked={status} onCheckedChange={setStatus} />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {analyzer ? "Save Changes" : "Add Analyzer"}
-            </Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit">{analyzer ? "Save Changes" : "Add Analyzer"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

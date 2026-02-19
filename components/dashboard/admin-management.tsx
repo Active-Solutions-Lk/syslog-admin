@@ -7,46 +7,37 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-// import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { getAdmins, createAdmin, updateAdmin, deleteAdmin } from "@/app/actions/admin";
-// import bcrypt from "bcryptjs"; // For password hashing
 import { CellContext } from "@tanstack/react-table";
 
-// Define types
 interface AdminFromServer {
   id: string;
-  name: string | null;
+  username: string;
   email: string;
   role: string | null;
-  status: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  created_at: Date;
 }
 
 interface Admin {
   id?: string;
-  name: string;
+  username: string;
   email: string;
   password?: string;
   role: string;
-  status: "active" | "inactive";
-  createdAt?: Date;
-  updatedAt?: Date;
 }
 
-// Define columns for the data table
 const columns = [
   {
-    accessorKey: "name",
-    header: "Name",
+    accessorKey: "username",
+    header: "Username",
     cell: ({ row }: CellContext<Admin, unknown>) => (
       <div className="flex items-center gap-3">
         <Avatar className="h-8 w-8">
-          <AvatarImage src={`https://api.dicebear.com/6.x/initials/svg?seed=${row.original.name}`} />
-          <AvatarFallback>{row.original.name?.charAt(0) || 'A'}</AvatarFallback>
+          <AvatarImage src={`https://api.dicebear.com/6.x/initials/svg?seed=${row.original.username}`} />
+          <AvatarFallback>{row.original.username?.charAt(0) || 'A'}</AvatarFallback>
         </Avatar>
-        <span>{row.original.name || 'N/A'}</span>
+        <span>{row.original.username || 'N/A'}</span>
       </div>
     ),
   },
@@ -61,19 +52,6 @@ const columns = [
       <span>{row.original.role || 'N/A'}</span>
     ),
   },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }: CellContext<Admin, unknown>) => (
-      <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-        row.original.status === "active" 
-          ? "bg-green-100 text-green-800" 
-          : "bg-red-100 text-red-800"
-      }`}>
-        {row.original.status?.charAt(0).toUpperCase() + row.original.status?.slice(1)}
-      </div>
-    ),
-  },
 ];
 
 export function AdminManagement() {
@@ -82,23 +60,18 @@ export function AdminManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState<Admin | null>(null);
 
-  // Fetch admins from server
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
         const result = await getAdmins();
         if (result.success) {
-          // Convert server admin data to client admin data
           const convertedAdmins = (result.admins || []).map((admin: AdminFromServer) => ({
             id: admin.id,
-            name: admin.name || '',
+            username: admin.username,
             email: admin.email,
             role: admin.role || 'Admin',
-            status: admin.status as "active" | "inactive",
           }));
           setAdmins(convertedAdmins);
-        } else {
-          console.error('Failed to fetch admins:', result.error);
         }
       } catch (error) {
         console.error('Error fetching admins:', error);
@@ -106,7 +79,6 @@ export function AdminManagement() {
         setLoading(false);
       }
     };
-
     fetchAdmins();
   }, []);
 
@@ -122,100 +94,72 @@ export function AdminManagement() {
 
   const handleDelete = async (admin: Admin) => {
     if (!admin.id) return;
-    
-    if (window.confirm(`Are you sure you want to delete ${admin.name}?`)) {
+    if (window.confirm(`Are you sure you want to delete admin ${admin.username}?`)) {
       try {
         const result = await deleteAdmin(admin.id);
         if (result.success) {
           setAdmins(admins.filter(a => a.id !== admin.id));
-        } else {
-          console.error('Failed to delete admin:', result.error);
-          alert('Failed to delete admin: ' + result.error);
         }
       } catch (error) {
         console.error('Error deleting admin:', error);
-        alert('Error deleting admin');
       }
     }
-  };
-
-  const handleAdvancedView = (admin: Admin) => {
-    console.log("Advanced view for:", admin);
-    // In a real app, this would navigate to a detailed view
   };
 
   const handleSaveAdmin = async (admin: Admin) => {
     try {
-      let result: { success: boolean; admin?: AdminFromServer; error?: string };
-      
+      let result;
       if (admin.id) {
-        // Update existing admin (without password)
-        const { id, name, email, role, status } = admin;
-        result = await updateAdmin({ id, name, email, role, status });
+        result = await updateAdmin({ id: admin.id, username: admin.username, email: admin.email, role: admin.role });
         if (result.success) {
-          // Convert server admin data to client admin data
-          const convertedAdmin = {
-            id: result.admin!.id,
-            name: result.admin!.name || '',
-            email: result.admin!.email,
-            role: result.admin!.role || 'Admin',
-            status: result.admin!.status as "active" | "inactive",
+          const updated = {
+            id: result.admin.id,
+            username: result.admin.username,
+            email: result.admin.email,
+            role: result.admin.role || 'Admin',
           };
-          setAdmins(admins.map(a => a.id === admin.id ? convertedAdmin : a));
+          setAdmins(admins.map(a => a.id === admin.id ? updated : a));
         }
       } else {
-        // Add new admin (with password)
-        const { name, email, password, role } = admin;
-        result = await createAdmin({ name, email, password, role });
+        result = await createAdmin({ username: admin.username, email: admin.email, password: admin.password!, role: admin.role });
         if (result.success) {
-          // Convert server admin data to client admin data
-          const convertedAdmin = {
-            id: result.admin!.id,
-            name: result.admin!.name || '',
-            email: result.admin!.email,
-            role: result.admin!.role || 'Admin',
-            status: result.admin!.status as "active" | "inactive",
+          const created = {
+            id: result.admin.id,
+            username: result.admin.username,
+            email: result.admin.email,
+            role: result.admin.role || 'Admin',
           };
-          setAdmins([...admins, convertedAdmin]);
+          setAdmins([...admins, created]);
         }
       }
-      
       if (result.success) {
         setIsDialogOpen(false);
         setEditingAdmin(null);
       } else {
-        console.error('Failed to save admin:', result.error);
-        alert('Failed to save admin: ' + result.error);
+        alert('Error: ' + result.error);
       }
     } catch (error) {
       console.error('Error saving admin:', error);
-      alert('Error saving admin');
     }
   };
 
-  if (loading) {
-    return <div>Loading admins...</div>;
-  }
+  if (loading) return <div>Loading admins...</div>;
 
   return (
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin Management</h1>
-        {/* <Button onClick={handleAdd}>Add Admin</Button> */ }
       </div>
-      
       <div className="bg-white rounded-lg border-0">
-        <DataTable 
-          columns={columns} 
-          data={admins} 
+        <DataTable
+          columns={columns}
+          data={admins}
           onEdit={handleEdit}
           onAdd={handleAdd}
           onDelete={handleDelete}
-          onAdvancedView={handleAdvancedView}
           tableName="admins"
         />
       </div>
-
       <AdminDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}

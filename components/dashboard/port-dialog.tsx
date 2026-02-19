@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -16,8 +15,6 @@ import { useState, useEffect } from "react";
 interface Port {
   id?: string;
   port: number;
-  created_at?: Date;
-  updated_at?: Date;
 }
 
 interface PortDialogProps {
@@ -30,34 +27,19 @@ interface PortDialogProps {
 export function PortDialog({ open, onOpenChange, port, onSave }: PortDialogProps) {
   const [portNumber, setPortNumber] = useState<number | "">("");
 
-  // Reset form when dialog opens or port changes
   useEffect(() => {
     if (open) {
-      if (port) {
-        setPortNumber(port.port || "");
-      } else {
-        setPortNumber("");
-      }
+      setPortNumber(port?.port || "");
     }
   }, [open, port]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (portNumber === "") {
-      alert("Please enter a port number");
-      return;
-    }
-    
-    const portData: Port = {
-      port: Number(portNumber),
-    };
-    
-    if (port?.id) {
-      portData.id = port.id;
-    }
-    
-    onSave(portData);
+    if (portNumber === "") return;
+    onSave({
+      ...(port?.id && { id: port.id }),
+      port: Number(portNumber)
+    });
   };
 
   return (
@@ -66,36 +48,22 @@ export function PortDialog({ open, onOpenChange, port, onSave }: PortDialogProps
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{port ? "Edit Port" : "Add Port"}</DialogTitle>
-            <DialogDescription>
-              {port 
-                ? "Make changes to the port here." 
-                : "Add a new port here."}
-            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="port" className="text-right">
-                Port Number
-              </Label>
+              <Label className="text-right">Port</Label>
               <Input
-                id="port"
                 type="number"
                 value={portNumber}
                 onChange={(e) => setPortNumber(e.target.value === "" ? "" : parseInt(e.target.value))}
                 className="col-span-3"
-                min="1"
-                max="65535"
                 required
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {port ? "Save Changes" : "Add Port"}
-            </Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit">{port ? "Save" : "Add"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -33,6 +33,10 @@ const data = {
           url: "/dashboard/projects",
         },
         {
+          title: "Devices",
+          url: "/dashboard/devices",
+        },
+        {
           title: "Ports",
           url: "/dashboard/ports",
         },
@@ -40,25 +44,12 @@ const data = {
           title: "Collectors",
           url: "/dashboard/collectors",
         },
-         {
+        {
           title: "Analyzers",
           url: "/dashboard/analyzers",
         },
       ],
     },
-    {
-      title: "Packages",
-      url: "#",
-      icon: "Package",
-      items: [
-        {
-          title: "Package List",
-          url: "/dashboard/packages",
-        },
-        
-      ],
-    },
-    
     {
       title: "Customers",
       url: "#",
@@ -68,7 +59,7 @@ const data = {
           title: "Reseller List",
           url: "/dashboard/resellers",
         },
-         {
+        {
           title: "End Customer List",
           url: "/dashboard/end-customer",
         },
@@ -80,27 +71,12 @@ const data = {
       icon: "Settings2",
       items: [
         {
-          title: "General",
-          url: "/dashboard/settings",
-        },
-        {
           title: "Admins",
           url: "/dashboard/admins",
         },
-      ],
-    },
-     {
-      title: "Logs",
-      url: "#",
-      icon: "IconFileAi",
-      items: [
         {
-          title: "API Logs",
-          url: "/dashboard/api-logs",
-        },
-        {
-          title: "Console Logs",
-          url: "/dashboard/console-logs",
+          title: "Project Types",
+          url: "/dashboard/project-types",
         },
       ],
     },

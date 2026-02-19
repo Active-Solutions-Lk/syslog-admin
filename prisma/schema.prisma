@@ -7,176 +7,152 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model internal_log {
-  id               Int      @id @default(autoincrement())
-  related_table    String?  @db.VarChar(100)
-  related_table_id Int?
-  severity         Int
-  message          String   @db.VarChar(500)
-  admin_id         Int?
-  action           String   @db.VarChar(100)
-  status_code      Int
-  additional_data  String?  @db.Text
-  created_at       DateTime @default(now()) @db.Timestamp(0)
-  updated_at       DateTime @default(now()) @db.Timestamp(0)
-}
-
 model admins {
-  id           Int        @id @default(autoincrement())
-  name         String?
-  email        String     @unique(map: "User_email_key")
-  passwordHash String?
-  role         String?    @db.VarChar(50)
-  status       Float
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime
-  projects     projects[]
-
-  @@index([id], map: "id")
-}
-
-model packages {
-  id               Int        @id @default(autoincrement())
-  name             String     @db.VarChar(50)
-  log_count        Int
-  log_duration     String     @db.VarChar(50)
-  project_duration String     @db.VarChar(50)
-  device_count     Int
-  created_at       DateTime   @default(now()) @db.Timestamp(0)
-  updated_at       DateTime   @default(now()) @db.Timestamp(0)
-  projects         projects[]
+  id         Int        @id @default(autoincrement())
+  username   String     @db.VarChar(50)
+  email      String     @db.VarChar(100)
+  password   String     @db.VarChar(255)
+  role       String?    @default("admin") @db.VarChar(20)
+  created_at DateTime   @default(now()) @db.Timestamp(0)
+  projects   projects[]
 }
 
 model ports {
-  id         Int        @id @default(autoincrement())
-  port       Int
-  created_at DateTime   @default(now()) @db.Timestamp(0)
-  updated_at DateTime   @default(now()) @db.Timestamp(0)
-  projects   projects[]
+  id          Int        @id @default(autoincrement())
+  port        Int
+  description String?    @db.VarChar(100)
+  created_at  DateTime   @default(now()) @db.Timestamp(0)
+  projects    projects[]
 }
 
 model projects {
   id              Int           @id @default(autoincrement())
   activation_key  String        @unique @db.VarChar(100)
-  pkg_id          Int
-  admin_id        Int?
-  collector_ip    Int?
-  logger_ip       Int?
+  project_type_id Int
+  port_id         Int
+  admin_id        Int
   reseller_id     Int?
+  end_customer_id Int?
+  collector_id    Int
+  analyzer_id     Int?
+  device_count    Int           @default(5)
   created_at      DateTime      @default(now()) @db.Timestamp(0)
   updated_at      DateTime      @default(now()) @db.Timestamp(0)
-  end_customer_id Int?
-  port_id         Int?
-  secret_key      String        @unique @db.VarChar(100)
-  status          Boolean
-  type            Int
-  is_active_coll  Int           @db.TinyInt
-  is_active_an    Int
-  api_logs        api_logs[]
-  admins          admins?       @relation(fields: [admin_id], references: [id], onDelete: Cascade, map: "fk_admin_id_admins_id")
-  collector       collectors?   @relation(fields: [collector_ip], references: [id], map: "fk_collector_ip_collectors_id")
-  logger          analyzers?    @relation(fields: [logger_ip], references: [id], map: "fk_logger_ip_logger_id")
-  end_customer    end_customer? @relation(fields: [end_customer_id], references: [id], onDelete: Cascade, map: "fk_end_customer_id")
-  packages        packages      @relation(fields: [pkg_id], references: [id], onDelete: Cascade, map: "fk_pkgid_package")
-  port            ports?        @relation(fields: [port_id], references: [id], map: "fk_port_id_with_ports_id")
-  project_type    project_types @relation(fields: [type], references: [id], map: "fk_project_type_id")
-  reseller        reseller?     @relation(fields: [reseller_id], references: [customer_id], onDelete: Cascade, map: "fk_reseller_id_with_reseller_id")
+  devices         devices[]
+  admins          admins        @relation(fields: [admin_id], references: [id], onUpdate: Restrict, map: "fk_admin_id_admins_id")
+  end_customer    end_customer? @relation(fields: [end_customer_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "fk_end_customer_id")
+  port            ports         @relation(fields: [port_id], references: [id], onUpdate: Restrict, map: "fk_port_id_with_ports_id")
+  reseller        reseller?     @relation(fields: [reseller_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "fk_reseller_id_with_reseller_id")
+  project_types   project_types @relation(fields: [project_type_id], references: [id], onUpdate: Restrict, map: "projects_ibfk_1")
+  collectors      collectors    @relation(fields: [collector_id], references: [id], onUpdate: Restrict, map: "projects_ibfk_6")
+  analyzers       analyzers?    @relation(fields: [analyzer_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "projects_ibfk_7")
 
-  @@unique([collector_ip, port_id], map: "unique_collector_port")
-  @@index([admin_id], map: "fk_admin_id_admins_id")
-  @@index([reseller_id], map: "fk_reseller_id_with_reseller_id")
-  @@index([pkg_id], map: "pkg_id")
   @@index([end_customer_id], map: "end_customer_id")
   @@index([port_id], map: "port_id")
-  @@index([type], map: "fk_project_type_id_idx")
-  @@index([collector_ip], map: "fk_collector_ip_collectors_id_idx")
-  @@index([logger_ip], map: "fk_logger_ip_logger_id_idx")
+  @@index([admin_id], map: "admin_id")
+  @@index([analyzer_id], map: "analyzer_id")
+  @@index([collector_id], map: "collector_id")
+  @@index([project_type_id], map: "project_type_id")
+  @@index([reseller_id], map: "reseller_id")
 }
 
 model reseller {
-  customer_id   Int        @id @default(autoincrement())
-  company_name  String     @unique(map: "company_name") @db.VarChar(100)
-  address       String?    @db.VarChar(250)
-  type          String     @db.VarChar(100)
-  credit_limit  String?    @db.VarChar(100)
-  payment_terms String?    @db.VarChar(100)
-  note          String?    @db.VarChar(250)
-  vat           String?    @db.VarChar(11)
-  city          Int?
-  created_at    DateTime   @default(now()) @db.Timestamp(0)
-  updated_at    DateTime   @default(now()) @db.Timestamp(0)
-  projects      projects[]
-
-  @@index([city], map: "city")
-}
-
-model session {
-  id           String   @id
-  userId       String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  expires      DateTime
-  sessionToken String   @unique(map: "Session_sessionToken_key")
-
-  @@index([userId], map: "Session_userId_fkey")
+  id             Int        @id @default(autoincrement())
+  company        String     @db.VarChar(100)
+  address        String?    @db.VarChar(255)
+  contact_person String     @db.VarChar(100)
+  tel            String     @db.VarChar(20)
+  email          String?    @db.VarChar(100)
+  status         Boolean    @default(true)
+  created_at     DateTime   @default(now()) @db.Timestamp(0)
+  updated_at     DateTime   @default(now()) @db.Timestamp(0)
+  projects       projects[]
 }
 
 model end_customer {
   id             Int        @id @default(autoincrement())
-  company        String?    @db.VarChar(50)
-  address        String?    @db.VarChar(100)
-  contact_person String     @db.VarChar(50)
-  tel            Int
-  email          String?    @db.VarChar(50)
-  status         Boolean
+  company        String     @db.VarChar(100)
+  address        String?    @db.VarChar(255)
+  contact_person String     @db.VarChar(100)
+  tel            String     @db.VarChar(20)
+  email          String?    @db.VarChar(100)
+  status         Boolean    @default(true)
   created_at     DateTime   @default(now()) @db.Timestamp(0)
   updated_at     DateTime   @default(now()) @db.Timestamp(0)
   projects       projects[]
 }
 
 model project_types {
-  id       Int        @id @default(autoincrement())
-  name     String?    @db.VarChar(10)
-  projects projects[]
+  id          Int        @id @default(autoincrement())
+  type        String     @db.VarChar(50)
+  description String?    @db.VarChar(255)
+  created_at  DateTime   @default(now()) @db.Timestamp(0)
+  projects    projects[]
 }
 
 model collectors {
-  id              Int        @id @default(autoincrement())
-  name            String?    @db.VarChar(50)
-  ip              String     @db.VarChar(100)
-  domain          String?    @db.VarChar(50)
-  secret_key      String?    @db.VarChar(100)
-  last_fetched_id Int
-  is_active       Boolean
-  created_at      DateTime   @default(now()) @db.Timestamp(0)
-  updated_at      DateTime   @default(now()) @db.Timestamp(0)
-  projects        projects[]
+  id               Int                @id @default(autoincrement())
+  name             String             @db.VarChar(100)
+  ip               String?            @db.VarChar(100)
+  domain           String?            @db.VarChar(255)
+  secret_key       String?            @db.VarChar(255)
+  is_active        Boolean            @default(true)
+  created_at       DateTime           @default(now()) @db.Timestamp(0)
+  updated_at       DateTime           @default(now()) @db.Timestamp(0)
+  collector_health collector_health[]
+  projects         projects[]
 }
 
 model analyzers {
-  id         Int        @id @default(autoincrement())
-  name       String?    @db.VarChar(50)
-  ip         String     @db.VarChar(50)
-  domain     String?    @db.VarChar(50)
-  status     Int        @db.TinyInt
-  created_at DateTime   @default(now()) @db.Timestamp(0)
-  updated_at DateTime   @default(now()) @db.Timestamp(0)
-  projects   projects[]
+  id              Int               @id @default(autoincrement())
+  name            String            @db.VarChar(100)
+  ip              String?           @db.VarChar(100)
+  domain          String?           @db.VarChar(255)
+  status          Boolean           @default(true)
+  created_at      DateTime          @default(now()) @db.Timestamp(0)
+  updated_at      DateTime          @default(now()) @db.Timestamp(0)
+  analyzer_health analyzer_health[]
+  projects        projects[]
 }
 
-model api_logs {
-  id              Int      @id @unique(map: "id") @default(autoincrement())
-  project_id      Int
-  cpu_status      Int
-  ram_status      Int
-  log_count       Int
-  type            String   @db.VarChar(20)
-  device_count    Int
-  last_login_date DateTime @default(now()) @db.Timestamp(0)
-  description     String   @db.VarChar(100)
-  created_at      DateTime @default(now()) @db.Timestamp(0)
-  updated_at      DateTime @default(now()) @db.Timestamp(0)
-  project         projects @relation(fields: [project_id], references: [id], onDelete: Cascade, map: "fk_project_id_with_projects_id")
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model devices {
+  id               Int      @id @default(autoincrement())
+  project_id       Int
+  device_key       String   @db.VarChar(200)
+  log_duration     Int      @default(30)
+  package_start_at DateTime @db.Date
+  package_end_at   DateTime @db.Date
+  created_at       DateTime @default(now()) @db.Timestamp(0)
+  updated_at       DateTime @default(now()) @db.Timestamp(0)
+  projects         projects @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "devices_ibfk_1")
 
   @@index([project_id], map: "project_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model analyzer_health {
+  id            Int       @id @default(autoincrement())
+  analyzer_id   Int
+  cpu_load      Float     @db.Float
+  ram_load      Float     @db.Float
+  disk_capacity Float     @db.Float
+  created_at    DateTime  @default(now()) @db.Timestamp(0)
+  updated_at    DateTime  @default(now()) @db.Timestamp(0)
+  analyzers     analyzers @relation(fields: [analyzer_id], references: [id], onDelete: Cascade, map: "fk_analyzer_id")
+
+  @@index([analyzer_id], map: "fk_analyzer_id")
+}
+
+model collector_health {
+  id            Int        @id @default(autoincrement())
+  collector_id  Int
+  cpu_load      Float      @db.Float
+  ram_load      Float      @db.Float
+  disk_capacity Float      @db.Float
+  created_at    DateTime   @default(now()) @db.Timestamp(0)
+  updated_at    DateTime   @default(now()) @db.Timestamp(0)
+  collectors    collectors @relation(fields: [collector_id], references: [id], onDelete: Cascade, map: "fk_collector")
+
+  @@index([collector_id], map: "fk_collector")
 }

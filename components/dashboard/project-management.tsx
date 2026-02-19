@@ -7,132 +7,43 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-// import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import React, { useState, useEffect, useMemo } from "react";
-import { getProjects, createProject, updateProject, deleteProject, updateProjectStatus } from "@/app/actions/project";
-import { getAnalyzers } from "@/app/actions/analyzers";
+import { getProjects, createProject, updateProject, deleteProject } from "@/app/actions/project";
+import { createDevice } from "@/app/actions/devices";
 import { CellContext } from "@tanstack/react-table";
-import { ApiLogsAdvancedView } from "@/components/dashboard/api-logs-advanced-view";
-
-// Define types
-interface ProjectFromServer {
-  id: string;
-  activation_key: string;
-  collector_ip: string | null;
-  logger_ip: string | null;
-  pkg_id: string;
-  admin_id: string | null;
-  reseller_id: string | null;
-  port_id: string | null;
-  end_customer_id: string | null;
-  type: string;
-  status: boolean;
-  is_active_coll: number;
-  is_active_an: number;
-  created_at?: Date;
-  updated_at?: Date;
-  admins?: {
-    name: string | null;
-    email: string;
-  } | null;
-  collector?: { // Add collector field
-    name: string | null;
-  } | null;
-  reseller?: {
-    company_name: string;
-  } | null;
-  end_customer?: {
-    company: string | null;
-  } | null;
-  packages?: {
-    name: string;
-  } | null;
-  port?: {
-    port: number;
-  } | null;
-  project_type?: {
-    name: string | null;
-  } | null;
-}
 
 interface Project {
-  id?: string;
-  activation_key?: string;
-  collector_ip: string | null;
-  logger_ip: string | null;
-  pkg_id: string;
-  admin_id?: string | null;
-  reseller_id?: string | null;
-  port_id?: string | null;
-  end_customer_id?: string | null;
-  type?: string;
-  status?: boolean;
-  is_active_coll?: number;
-  is_active_an?: number;
-  created_at?: Date;
-  updated_at?: Date;
-  admins?: {
-    name: string | null;
-    email: string;
-  } | null;
-  collector?: { // Add collector field
-    name: string | null;
-  } | null;
-  reseller?: {
-    company_name: string;
-  } | null;
-  end_customer?: {
-    company: string | null;
-  } | null;
-  packages?: {
-    name: string;
-  } | null;
-  port?: {
-    port: number;
-  } | null;
-  project_type?: {
-    name: string | null;
-  } | null;
+  id: string;
+  activation_key: string;
+  device_count: number;
+  project_types: { type: string };
+  collectors: { name: string };
+  admins: { username: string };
+  reseller?: { company: string } | null;
+  end_customer?: { company: string | null; contact_person: string } | null;
+  ports?: { port: number } | null;
+  analyzers?: { name: string } | null;
 }
 
 export function ProjectManagement() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [analyzers, setAnalyzers] = useState<{ id: string; name: string | null; ip?: string | null }[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  // Add state for advanced view dialog
-  const [isAdvancedViewOpen, setIsAdvancedViewOpen] = useState(false);
-  const [viewingProject, setViewingProject] = useState<Project | null>(null);
 
-  // Fetch projects from server
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const [projectsResult, analyzersResult] = await Promise.all([
-          getProjects(),
-          getAnalyzers(),
-        ]);
-
-        if (analyzersResult.success) {
-          setAnalyzers(analyzersResult.analyzers || []);
-        } else {
-          console.error('Failed to fetch analyzers:', analyzersResult.error);
-        }
-
-        if (projectsResult.success) {
-          setProjects(projectsResult.projects || []);
-        } else {
-          console.error('Failed to fetch projects:', projectsResult.error);
+        const result = await getProjects();
+        if (result.success) {
+          setProjects(result.projects || []);
         }
       } catch (error) {
-        console.error('Error fetching projects/analyzers:', error);
+        console.error('Error fetching projects:', error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchProjects();
   }, []);
 
@@ -148,56 +59,18 @@ export function ProjectManagement() {
 
   const handleDelete = async (project: Project) => {
     if (!project.id) return;
-
     if (window.confirm(`Are you sure you want to delete project ${project.activation_key}?`)) {
       try {
         const result = await deleteProject(project.id);
         if (result.success) {
           setProjects(projects.filter(p => p.id !== project.id));
-        } else {
-          console.error('Failed to delete project:', result.error);
-          alert('Failed to delete project: ' + result.error);
         }
       } catch (error) {
         console.error('Error deleting project:', error);
-        alert('Error deleting project');
       }
     }
   };
 
-  const handleAdvancedView = (project: Project) => {
-    console.log("Advanced view for:", project);
-    // Set the project to view and open the dialog
-    setViewingProject(project);
-    setIsAdvancedViewOpen(true);
-  };
-
-  const handleStatusChange = React.useCallback(async (project: Project, newStatus: boolean) => {
-    if (!project.id) return;
-
-    try {
-      const result = await updateProjectStatus(project.id, newStatus);
-      if (result.success) {
-        setProjects(projects.map(p =>
-          p.id === project.id ? { ...p, status: newStatus } : p
-        ));
-      } else {
-        console.error('Failed to update project status:', result.error);
-        alert('Failed to update project status: ' + result.error);
-      }
-    } catch (error) {
-      console.error('Error updating project status:', error);
-      alert('Error updating project status');
-    }
-  }, [projects, setProjects]);
-
-  const analyzerMap = React.useMemo(() => {
-    const m = new Map<string, string>();
-    analyzers.forEach((a) => m.set(a.id, a.name || a.ip || 'N/A'));
-    return m;
-  }, [analyzers]);
-
-  // Define columns for the data table using useMemo to prevent re-creation on every render
   const columns = useMemo(() => [
     {
       accessorKey: "activation_key",
@@ -205,162 +78,104 @@ export function ProjectManagement() {
       cell: ({ row }: CellContext<Project, unknown>) => (
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={`https://api.dicebear.com/6.x/initials/svg?seed=${row.original.activation_key || 'P'}`} />
             <AvatarFallback>{row.original.activation_key?.charAt(0) || 'P'}</AvatarFallback>
           </Avatar>
-          <span>{row.original.activation_key || 'N/A'}</span>
+          <span className="font-medium">{row.original.activation_key}</span>
         </div>
       ),
     },
     {
-      accessorKey: "collector.name", // Change to collector name
+      header: "Type",
+      cell: ({ row }: CellContext<Project, unknown>) => row.original.project_types?.type || 'N/A',
+    },
+    {
       header: "Collector",
-      cell: ({ row }: CellContext<Project, unknown>) => (
-        <span>{row.original.collector?.name || 'N/A'}</span>
-      ),
+      cell: ({ row }: CellContext<Project, unknown>) => row.original.collectors?.name || 'N/A',
     },
     {
-      accessorKey: "logger_ip",
       header: "Analyzer",
-      cell: ({ row }: CellContext<Project, unknown>) => {
-        const id = row.original.logger_ip;
-        const display = id ? analyzerMap.get(id) || id : 'N/A';
-        return <span>{display}</span>;
-      },
+      cell: ({ row }: CellContext<Project, unknown>) => row.original.analyzers?.name || 'N/A',
     },
     {
-      accessorKey: "packages.name",
-      header: "Package",
-      cell: ({ row }: CellContext<Project, unknown>) => (
-        <span>{row.original.packages?.name || 'N/A'}</span>
-      ),
-    },
-    {
-      accessorKey: "admins.name",
-      header: "Admin",
-      cell: ({ row }: CellContext<Project, unknown>) => (
-        <span>{row.original.admins?.name || 'N/A'}</span>
-      ),
-    },
-    {
-      accessorKey: "reseller.company_name",
-      header: "Reseller",
-      cell: ({ row }: CellContext<Project, unknown>) => (
-        <span>{row.original.reseller?.company_name || 'N/A'}</span>
-      ),
-    },
-    {
-      accessorKey: "end_customer.company",
-      header: "End Customer",
-      cell: ({ row }: CellContext<Project, unknown>) => (
-        <span>{row.original.end_customer?.company || 'N/A'}</span>
-      ),
-    },
-    {
-      accessorKey: "port_id",
       header: "Port",
-      cell: ({ row }: CellContext<Project, unknown>) => (
-        <span>{row.original.port ? `Port ${row.original.port.port}` : 'N/A'}</span>
-      ),
+      cell: ({ row }: CellContext<Project, unknown>) => row.original.ports?.port || 'N/A',
     },
     {
-      accessorKey: "project_type.name",
-      header: "Project Type",
-      cell: ({ row }: CellContext<Project, unknown>) => (
-        <span>{row.original.project_type?.name || 'N/A'}</span>
-      ),
+      header: "Customer",
+      cell: ({ row }: CellContext<Project, unknown>) => row.original.end_customer?.company || row.original.end_customer?.contact_person || 'N/A',
     },
     {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }: CellContext<Project, unknown>) => (
-        <div className="flex items-center gap-2">
-          <Switch
-            checked={row.original.status}
-            onCheckedChange={(checked: boolean) => handleStatusChange(row.original, checked)}
-          />
-          <span className="text-sm">
-            {row.original.status ? "Enabled" : "Disabled"}
-          </span>
-        </div>
-      ),
+      accessorKey: "device_count",
+      header: "Devices",
     },
-  ], [handleStatusChange, analyzerMap]);
+    {
+      header: "Admin",
+      cell: ({ row }: CellContext<Project, unknown>) => row.original.admins?.username || 'N/A',
+    },
+  ], []);
 
-  const handleSaveProject = async (project: Project) => {
+  const handleSaveProject = async ({ projectData, localDevices }: { projectData: any, localDevices: any[] }) => {
     try {
-      let result: { success: boolean; project?: ProjectFromServer; error?: string };
+      let result;
+      // Handle legacy format if just projectData is passed directly (fallback)
+      const data = projectData || arguments[0];
+      const devices = localDevices || [];
 
-      if (project.id) {
-        // Update existing project
-        const { id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, status, is_active_coll, is_active_an } = project;
-        result = await updateProject({ id, activation_key, collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, status, is_active_coll, is_active_an });
-        if (result.success) {
-          setProjects(projects.map(p => p.id === project.id ? result.project! : p));
-        }
+      if (editingProject?.id) {
+        result = await updateProject({ ...data, id: editingProject.id });
       } else {
-        // Add new project
-        const { collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, is_active_coll, is_active_an } = project;
-        result = await createProject({ collector_ip, logger_ip, pkg_id, admin_id, reseller_id, port_id, end_customer_id, type, is_active_coll, is_active_an });
-        if (result.success) {
-          setProjects([...projects, result.project!]);
-        }
+        result = await createProject(data);
       }
 
       if (result.success) {
+        // If it's a new project and we have local devices to create
+        if (!editingProject?.id && devices.length > 0 && result.project?.id) {
+          const projectId = result.project.id;
+          // Create all devices sequantially
+          for (const device of devices) {
+            await createDevice({
+              ...device,
+              project_id: projectId
+            });
+          }
+        }
+
+        // Refresh list
+        const refreshed = await getProjects();
+        if (refreshed.success) setProjects(refreshed.projects || []);
         setIsDialogOpen(false);
         setEditingProject(null);
       } else {
-        console.error('Failed to save project:', result.error);
-        alert('Failed to save project: ' + result.error);
+        alert('Error: ' + result.error);
       }
     } catch (error) {
       console.error('Error saving project:', error);
-      alert('Error saving project');
     }
   };
 
-  if (loading) {
-    return <div>Loading projects...</div>;
-  }
+  if (loading) return <div>Loading projects...</div>;
 
   return (
     <>
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Project Management</h1>
-        {/* <Button onClick={handleAdd}>Add Project</Button> */}
       </div>
-
-      <div className="bg-white rounded-lg border-0">
+      <div className="bg-white rounded-lg border-0 mt-4">
         <DataTable
           columns={columns}
           data={projects}
           onEdit={handleEdit}
           onAdd={handleAdd}
           onDelete={handleDelete}
-          onAdvancedView={handleAdvancedView}
           tableName="projects"
         />
       </div>
-
       <ProjectDialog
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         project={editingProject || undefined}
         onSave={handleSaveProject}
       />
-
-      {/* Advanced View: reuse API logs advanced dialog by activation key */}
-      {viewingProject?.activation_key && (
-        <ApiLogsAdvancedView
-          open={isAdvancedViewOpen}
-          onOpenChange={(open) => {
-            setIsAdvancedViewOpen(open);
-            if (!open) setViewingProject(null);
-          }}
-          activationKey={viewingProject.activation_key}
-        />
-      )}
     </>
   );
 }

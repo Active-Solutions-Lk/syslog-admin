@@ -16,22 +16,19 @@ export async function getAdmins() {
     const admins = await prisma.admins.findMany({
       select: {
         id: true,
-        name: true,
+        username: true,
         email: true,
         role: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
+        created_at: true,
       },
     });
-    
-    // Convert status from float to string for frontend
+
+    // Map to consistently use strings for IDs
     const formattedAdmins = admins.map(admin => ({
       ...admin,
-      status: admin.status === 1 ? 'active' : 'inactive',
-      id: admin.id.toString(), // Convert to string to match frontend expectations
+      id: admin.id.toString(),
     }));
-    
+
     return {
       success: true,
       admins: formattedAdmins,
@@ -55,29 +52,25 @@ export async function getAdminById(id) {
       },
       select: {
         id: true,
-        name: true,
+        username: true,
         email: true,
         role: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
+        created_at: true,
       },
     });
-    
+
     if (!admin) {
       return {
         success: false,
         error: 'Admin not found',
       };
     }
-    
-    // Convert status from float to string for frontend
+
     const formattedAdmin = {
       ...admin,
-      status: admin.status === 1 ? 'active' : 'inactive',
-      id: admin.id.toString(), // Convert to string to match frontend expectations
+      id: admin.id.toString(),
     };
-    
+
     return {
       success: true,
       admin: formattedAdmin,
@@ -93,61 +86,49 @@ export async function getAdminById(id) {
   }
 }
 
-export async function createAdmin({ name, email, password, role }) {
+export async function createAdmin({ username, email, password, role }) {
   try {
-    // Check if admin with this email already exists
-    const existingAdmin = await prisma.admins.findUnique({
+    const existingAdmin = await prisma.admins.findFirst({
       where: {
-        email,
+        OR: [
+          { email },
+          { username }
+        ]
       },
     });
-    
+
     if (existingAdmin) {
       return {
         success: false,
-        error: 'Admin with this email already exists',
+        error: 'Admin with this email or username already exists',
       };
     }
-    
-    // Hash password
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    
-    // Get current date for timestamps
-    const now = new Date();
-    
-    // Create admin
+
     const admin = await prisma.admins.create({
       data: {
-        name,
+        username,
         email,
-        passwordHash: hashedPassword,
-        role: role || 'Admin',
-        status: 1, // Active by default
-        createdAt: now,
-        updatedAt: now,
+        password: hashedPassword,
+        role: role || 'admin',
       },
       select: {
         id: true,
-        name: true,
+        username: true,
         email: true,
         role: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
+        created_at: true,
       },
     });
-    
-    // Convert status from float to string for frontend
-    const formattedAdmin = {
-      ...admin,
-      status: admin.status === 1 ? 'active' : 'inactive',
-      id: admin.id.toString(), // Convert to string to match frontend expectations
-    };
-    
+
     return {
       success: true,
-      admin: formattedAdmin,
+      admin: {
+        ...admin,
+        id: admin.id.toString(),
+      },
       message: 'Admin created successfully',
     };
   } catch (error) {
@@ -161,58 +142,32 @@ export async function createAdmin({ name, email, password, role }) {
   }
 }
 
-export async function updateAdmin({ id, name, email, role, status }) {
+export async function updateAdmin({ id, username, email, role }) {
   try {
-    // Check if another admin with this email already exists
-    const existingAdmin = await prisma.admins.findUnique({
-      where: {
-        email,
-      },
-    });
-    
-    if (existingAdmin && existingAdmin.id !== parseInt(id)) {
-      return {
-        success: false,
-        error: 'Another admin with this email already exists',
-      };
-    }
-    
-    // Get current date for updatedAt timestamp
-    const now = new Date();
-    
-    // Update admin
     const admin = await prisma.admins.update({
       where: {
         id: parseInt(id),
       },
       data: {
-        name,
+        username,
         email,
         role,
-        status: status === 'active' ? 1 : 0,
-        updatedAt: now,
       },
       select: {
         id: true,
-        name: true,
+        username: true,
         email: true,
         role: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
+        created_at: true,
       },
     });
-    
-    // Convert status from float to string for frontend
-    const formattedAdmin = {
-      ...admin,
-      status: admin.status === 1 ? 'active' : 'inactive',
-      id: admin.id.toString(), // Convert to string to match frontend expectations
-    };
-    
+
     return {
       success: true,
-      admin: formattedAdmin,
+      admin: {
+        ...admin,
+        id: admin.id.toString(),
+      },
       message: 'Admin updated successfully',
     };
   } catch (error) {
@@ -234,13 +189,12 @@ export async function updateAdmin({ id, name, email, role, status }) {
 
 export async function deleteAdmin(id) {
   try {
-    // Delete admin
     await prisma.admins.delete({
       where: {
         id: parseInt(id),
       },
     });
-    
+
     return {
       success: true,
       message: 'Admin deleted successfully',
