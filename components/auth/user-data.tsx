@@ -16,13 +16,13 @@ export async function getCurrentUserData() {
 
   console.log('User data:', user);
   console.log('User error:', error);
-  
+
   if (error || !user) {
     // If it's a session-related error, redirect to login
     if (error === 'Session not found' || error === 'Session expired') {
       redirect('/auth/login');
     }
-    
+
     // Return default user data if not logged in for other reasons
     return {
       name: 'Guest',
@@ -30,7 +30,7 @@ export async function getCurrentUserData() {
       avatar: '/avatars/guest.jpg',
     };
   }
-  
+
   // Fetch full user data from database
   try {
     const dbUser = await prisma.admins.findUnique({
@@ -38,14 +38,14 @@ export async function getCurrentUserData() {
         id: parseInt(user.id),
       },
       select: {
-        name: true,
+        username: true,
         email: true,
       },
     });
-    
+
     // Return actual user data
     return {
-      name: dbUser?.name || 'User',
+      name: dbUser?.username || 'User',
       email: dbUser?.email || user.email,
       avatar: '/avatars/admin.jpg', // You can customize this based on user data
     };
