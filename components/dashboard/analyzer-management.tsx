@@ -103,7 +103,7 @@ export function AnalyzerManagement() {
       <div className="bg-white rounded-lg border-0 mt-4">
         <DataTable columns={columns} data={analyzers} onEdit={handleEdit} onAdd={handleAdd} onDelete={handleDelete} onHealthCheck={handleHealthCheck} tableName="analyzers" />
       </div>
-      <AnalyzerDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} analyzer={editingAnalyzer || undefined} onSave={handleSave} />
+      <AnalyzerDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} analyzer={editingAnalyzer as any || undefined} onSave={handleSave} />
       <ServerHealthDialog
         open={healthDialogState.open}
         onOpenChange={(open) => setHealthDialogState(prev => ({ ...prev, open }))}

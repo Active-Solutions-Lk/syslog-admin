@@ -119,7 +119,7 @@ export function CollectorManagement() {
       <div className="bg-white rounded-lg border-0 mt-4">
         <DataTable columns={columns} data={collectors} onEdit={handleEdit} onAdd={handleAdd} onDelete={handleDelete} onHealthCheck={handleHealthCheck} tableName="collectors" />
       </div>
-      <CollectorDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} collector={editingCollector || undefined} onSave={handleSave} />
+      <CollectorDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} collector={editingCollector as any || undefined} onSave={handleSave} />
       <ServerHealthDialog
         open={healthDialogState.open}
         onOpenChange={(open) => setHealthDialogState(prev => ({ ...prev, open }))}

@@ -52,8 +52,8 @@ const columns = [
     header: "Status",
     cell: ({ row }: CellContext<Reseller, unknown>) => (
       <div className={`px-2 py-1 rounded-full text-xs font-medium ${row.original.status
-          ? "bg-green-100 text-green-800"
-          : "bg-red-100 text-red-800"
+        ? "bg-green-100 text-green-800"
+        : "bg-red-100 text-red-800"
         }`}>
         {row.original.status ? "Active" : "Inactive"}
       </div>
@@ -111,9 +111,9 @@ export function ResellerManagement() {
     try {
       let result;
       if (reseller.id) {
-        result = await updateReseller(reseller);
+        result = await updateReseller(reseller as any);
       } else {
-        result = await createReseller(reseller);
+        result = await createReseller(reseller as any);
       }
 
       if (result.success) {

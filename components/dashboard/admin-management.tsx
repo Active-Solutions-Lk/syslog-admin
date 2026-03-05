@@ -111,7 +111,7 @@ export function AdminManagement() {
       let result;
       if (admin.id) {
         result = await updateAdmin({ id: admin.id, username: admin.username, email: admin.email, role: admin.role });
-        if (result.success) {
+        if (result.success && result.admin) {
           const updated = {
             id: result.admin.id,
             username: result.admin.username,
@@ -122,7 +122,7 @@ export function AdminManagement() {
         }
       } else {
         result = await createAdmin({ username: admin.username, email: admin.email, password: admin.password!, role: admin.role });
-        if (result.success) {
+        if (result.success && result.admin) {
           const created = {
             id: result.admin.id,
             username: result.admin.username,

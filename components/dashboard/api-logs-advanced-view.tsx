@@ -69,7 +69,7 @@ export function ApiLogsAdvancedView({ open, onOpenChange, activationKey }: ApiLo
         created_at: Date;
         updated_at: Date;
       }
-      
+
       // Helper function to convert ApiLogFromServer to ApiLog
       const convertToApiLog = (apiLogFromServer: ApiLogFromServer): ApiLog => {
         return {
@@ -85,44 +85,44 @@ export function ApiLogsAdvancedView({ open, onOpenChange, activationKey }: ApiLo
           ...packageInfoFromServer,
         };
       };
-      
+
       const fetchApiLogs = async () => {
         try {
           setLoading(true);
-          
+
           // Fetch both API logs and package info in parallel
           const [logsResult, packageResult] = await Promise.all([
             getApiLogsByActivationKey(activationKey),
-            getProjectPackageInfo(activationKey)
+            getProjectPackageInfo(activationKey) as Promise<any>
           ]);
-          
+
           // Handle API logs
           if (logsResult.success) {
             const logsFromServer = logsResult.apiLogs || [];
             const convertedLogs = logsFromServer.map(convertToApiLog);
             setApiLogs(convertedLogs);
-            
+
             // Prepare chart data - aggregate CPU usage over last 7 days
             if (convertedLogs.length > 0) {
               // Filter logs for the last 7 days
               const sevenDaysAgo = new Date();
               sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-              
+
               const recentLogs = convertedLogs.filter((log: ApiLog) => {
                 if (!log.created_at) return false;
                 const logDate = new Date(log.created_at);
                 return logDate >= sevenDaysAgo;
               });
-              
+
               // Aggregate CPU and RAM data by day
               const dailyCpuData: { [key: string]: { total: number; count: number } } = {};
               const dailyRamData: { [key: string]: { total: number; count: number } } = {};
-              
+
               recentLogs.forEach((log: ApiLog) => {
                 if (log.created_at) {
                   const date = new Date(log.created_at);
                   const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD format
-                  
+
                   // CPU data aggregation
                   if (!dailyCpuData[dateKey]) {
                     dailyCpuData[dateKey] = {
@@ -130,10 +130,10 @@ export function ApiLogsAdvancedView({ open, onOpenChange, activationKey }: ApiLo
                       count: 0
                     };
                   }
-                  
+
                   dailyCpuData[dateKey].total += log.cpu_status;
                   dailyCpuData[dateKey].count += 1;
-                  
+
                   // RAM data aggregation
                   if (!dailyRamData[dateKey]) {
                     dailyRamData[dateKey] = {
@@ -141,12 +141,12 @@ export function ApiLogsAdvancedView({ open, onOpenChange, activationKey }: ApiLo
                       count: 0
                     };
                   }
-                  
+
                   dailyRamData[dateKey].total += log.ram_status;
                   dailyRamData[dateKey].count += 1;
                 }
               });
-              
+
               // Convert to chart data points - show average values per day
               const cpuPoints = Object.keys(dailyCpuData)
                 .map(date => ({
@@ -154,28 +154,28 @@ export function ApiLogsAdvancedView({ open, onOpenChange, activationKey }: ApiLo
                   value: Math.round(dailyCpuData[date].total / dailyCpuData[date].count) // Average CPU usage
                 }))
                 .sort((a, b) => a.timestamp.localeCompare(b.timestamp)); // Sort by date
-              
+
               const ramPoints = Object.keys(dailyRamData)
                 .map(date => ({
                   timestamp: date,
                   value: Math.round(dailyRamData[date].total / dailyRamData[date].count) // Average RAM usage
                 }))
                 .sort((a, b) => a.timestamp.localeCompare(b.timestamp)); // Sort by date
-              
+
               // For other stats, use the most recent values
               if (recentLogs.length > 0) {
                 const latestLog = recentLogs[0] as ApiLog; // Most recent log
-                
+
                 const logPoints = [{
                   timestamp: latestLog.created_at ? new Date(latestLog.created_at).toLocaleDateString() : 'Latest',
                   value: latestLog.log_count
                 }];
-                
+
                 const devicePoints = [{
                   timestamp: latestLog.created_at ? new Date(latestLog.created_at).toLocaleDateString() : 'Latest',
                   value: latestLog.device_count
                 }];
-                
+
                 setCpuData(cpuPoints);
                 setRamData(ramPoints);
                 setLogData(logPoints);
@@ -197,7 +197,7 @@ export function ApiLogsAdvancedView({ open, onOpenChange, activationKey }: ApiLo
           } else {
             console.error('Failed to fetch API logs:', logsResult.error);
           }
-          
+
           // Handle package info
           if (packageResult.success && packageResult.packageInfo) {
             setPackageInfo(convertToPackageInfo(packageResult.packageInfo));

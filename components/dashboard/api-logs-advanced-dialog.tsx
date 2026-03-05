@@ -84,10 +84,7 @@ export function ApiLogsAdvancedDialog({
                 <ApiLogChart
                   title="CPU Usage"
                   description="Total CPU utilization over the last 7 days"
-                  chartData={cpuData.map((point) => ({
-                    date: point.timestamp,
-                    value: point.value,
-                  }))}
+                  data={cpuData}
                 />
               </div>
 

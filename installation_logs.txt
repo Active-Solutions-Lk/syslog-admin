@@ -1,0 +1,93 @@
+root@console-virtual-machine:/var/www/html/syslog-admin# ls
+ANALYSIS_AND_FIX_PLAN.md  components.json    lib             next.config.ts  package.json        prisma            README.md
+app                       eslint.config.mjs  list-admins.js  next-env.d.ts   package-lock.json   prisma.config.ts  test-bcrypt.js
+components                hooks              middleware.ts   node_modules    postcss.config.mjs  public            tsconfig.json
+root@console-virtual-machine:/var/www/html/syslog-admin# rm -r .next
+root@console-virtual-machine:/var/www/html/syslog-admin# npm run build
+
+> syslog-admin@0.1.0 build
+> next build --turbopack
+
+   ▲ Next.js 15.5.4 (Turbopack)
+   - Environments: .env
+
+   Creating an optimized production build ...
+ ✓ Finished writing to disk in 130ms
+ ✓ Compiled successfully in 59s
+
+Failed to compile.
+
+./app/api/project_activation/route.js
+17:40  Warning: 'clientIp' is defined but never used.  @typescript-eslint/no-unused-vars
+30:12  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/api/project_validate/route.js
+17:40  Warning: 'clientIp' is defined but never used.  @typescript-eslint/no-unused-vars
+29:12  Warning: 'e' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/dashboard/analyzer-management.tsx
+46:70  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+82:74  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/dashboard/collector-management.tsx
+62:72  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+91:55  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+93:46  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+98:76  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/dashboard/device-dialog.tsx
+54:46  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+106:11  Warning: 'selectedProject' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./components/dashboard/device-management.tsx
+29:25  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+34:25  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+41:25  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+50:25  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+55:25  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+60:25  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/dashboard/end-customer-management.tsx
+71:55  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+119:79  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/dashboard/project-dialog.tsx
+7:3  Warning: 'DialogDescription' is defined but never used.  @typescript-eslint/no-unused-vars
+36:13  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+37:18  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+50:42  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+51:52  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+55:42  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+98:67  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+115:53  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+116:49  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+117:58  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+118:58  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+119:61  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+120:58  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+121:46  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+./components/dashboard/project-management.tsx
+8:3  Warning: 'AvatarImage' is defined but never used.  @typescript-eslint/no-unused-vars
+117:82  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+117:101  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+121:35  Error: Use the rest parameters instead of 'arguments'.  prefer-rest-params
+
+./components/dashboard/project-type-management.tsx
+7:10  Warning: 'CellContext' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/dashboard/reseller-dialog.tsx
+15:10  Warning: 'ComboBox' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/dashboard/server-health-dialog.tsx
+11:56  Warning: 'Pie' is defined but never used.  @typescript-eslint/no-unused-vars
+11:61  Warning: 'PieChart' is defined but never used.  @typescript-eslint/no-unused-vars
+11:71  Warning: 'Label' is defined but never used.  @typescript-eslint/no-unused-vars
+34:38  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+66:11  Warning: 'diskData' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./lib/auth.ts
+25:18  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+root@console-virtual-machine:/var/www/html/syslog-admin#
