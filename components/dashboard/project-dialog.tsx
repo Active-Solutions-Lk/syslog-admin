@@ -24,6 +24,12 @@ import { getDevicesByProjectId, createDevice, deleteDevice } from "@/app/actions
 import { format } from "date-fns";
 import { Copy, Trash } from "lucide-react";
 
+// sort options alphabetically
+const sortOptions = (arr: { value: string; label: string }[]) =>
+  arr.sort((a, b) =>
+    a.label.localeCompare(b.label, undefined, { sensitivity: "base" })
+  );
+
 const generateActivationKey = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   const gen = () => Array.from({ length: 4 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join("");
@@ -112,14 +118,22 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
           getProjectTypes(), getAdmins(), getResellers(), getEndCustomers(), getCollectors(), getAnalyzers(), getPorts()
         ]);
         setOptions({
-          types: (types.projectTypes || []).map((t: any) => ({ value: t.id, label: t.type })),
-          admins: (admins.admins || []).map((a: any) => ({ value: a.id, label: a.username })),
-          resellers: (resellers.resellers || []).map((r: any) => ({ value: r.id, label: r.company })),
-          customers: (customers.customers || []).map((c: any) => ({ value: c.id, label: c.company || c.contact_person })),
-          collectors: (collectors.collectors || []).map((c: any) => ({ value: c.id, label: c.name })),
-          analyzers: (analyzers.analyzers || []).map((a: any) => ({ value: a.id, label: a.name })),
-          ports: (ports.ports || []).map((p: any) => ({ value: p.id, label: `Port ${p.port}` }))
-        });
+          types: sortOptions((types.projectTypes || []).map((t: any) => ({ value: t.id, label: t.type }))),
+          admins: sortOptions((admins.admins || []).map((a: any) => ({ value: a.id, label: a.username }))),
+          resellers: sortOptions((resellers.resellers || []).map((r: any) => ({ value: r.id, label: r.company }))),
+          customers: sortOptions((customers.customers || []).map((c: any) => ({
+            value: c.id,
+            label: c.company || c.contact_person
+          }))),
+          collectors: sortOptions((collectors.collectors || []).map((c: any) => ({ value: c.id, label: c.name }))),
+          analyzers: sortOptions((analyzers.analyzers || []).map((a: any) => ({ value: a.id, label: a.name }))),
+          ports: (ports.ports || [])
+            .sort((a: any, b: any) => a.port - b.port)
+            .map((p: any) => ({
+              value: p.id,
+              label: `Port ${p.port}`
+            })),
+          });
 
         if (project) {
           if (project.id) fetchDevices(project.id);
