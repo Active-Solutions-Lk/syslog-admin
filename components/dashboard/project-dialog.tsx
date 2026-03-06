@@ -224,7 +224,9 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
             <div className="space-y-2">
               <Label>Activation Key</Label>
               <div className="flex gap-2">
-                <Input value={activation_key} onChange={(e) => setActivationKey(e.target.value)} required />
+                {/* Activation key should be read only */}
+                <Input value={activation_key} readOnly required />
+                {/* <Input value={activation_key} onChange={(e) => setActivationKey(e.target.value)} required /> */}
                 {!project && <Button type="button" variant="outline" onClick={() => setActivationKey(generateActivationKey())}>Gen</Button>}
               </div>
             </div>
