@@ -123,14 +123,15 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
 
         if (project) {
           if (project.id) fetchDevices(project.id);
+          // set project data
           setActivationKey(project.activation_key);
-          setProjectTypeId(project.project_types?.id?.toString() || "");
-          setCollectorId(project.collectors?.id?.toString() || "");
-          setAnalyzerId(project.analyzers?.id?.toString() || "");
-          setPortId(project.ports?.id?.toString() || "");
-          setAdminId(project.admins?.id?.toString() || "");
-          setResellerId(project.reseller?.id?.toString() || "");
-          setEndCustomerId(project.end_customer?.id?.toString() || "");
+          setProjectTypeId(project.project_type_id?.toString() || "");
+          setCollectorId(project.collector_id?.toString() || "");
+          setAnalyzerId(project.analyzer_id?.toString() || "");
+          setPortId(project.port_id?.toString() || "");
+          setAdminId(project.admin_id?.toString() || "");
+          setResellerId(project.reseller_id?.toString() || "");
+          setEndCustomerId(project.end_customer_id?.toString() || "");
           setDeviceCount(project.device_count?.toString() || "5");
           setLocalDevices([]); // Reset local devices for edit mode
         } else {
