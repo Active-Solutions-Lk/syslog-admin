@@ -138,24 +138,29 @@ export function DeviceDialog({ open, onOpenChange, device, onSave }: DeviceDialo
                                             <CommandList>
                                                 <CommandEmpty>No project found.</CommandEmpty>
                                                 <CommandGroup>
-                                                    {projects.map((p) => (
-                                                        <CommandItem
-                                                            key={p.id}
-                                                            value={`${p.end_customer?.company || `Project ${p.id}`} ${p.activation_key}`}
-                                                            onSelect={() => {
-                                                                setProjectId(p.id === projectId ? "" : p.id);
-                                                                setDropdownOpen(false);
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    projectId === p.id ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {p.end_customer?.company || `Project ${p.id}`} ({p.activation_key})
-                                                        </CommandItem>
-                                                    ))}
+                                                {projects
+                                                .sort((a, b) =>
+                                                    (a.end_customer?.company || `Project ${a.id}`)
+                                                    .localeCompare(b.end_customer?.company || `Project ${b.id}`)
+                                                )
+                                                .map((p) => (
+                                                    <CommandItem
+                                                    key={p.id}
+                                                    value={`${p.end_customer?.company || `Project ${p.id}`} ${p.activation_key}`}
+                                                    onSelect={() => {
+                                                        setProjectId(p.id === projectId ? "" : p.id);
+                                                        setDropdownOpen(false);
+                                                    }}
+                                                    >
+                                                    <Check
+                                                        className={cn(
+                                                        "mr-2 h-4 w-4",
+                                                        projectId === p.id ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {p.end_customer?.company || `Project ${p.id}`} ({p.activation_key})
+                                                    </CommandItem>
+                                                ))}
                                                 </CommandGroup>
                                             </CommandList>
                                         </Command>
