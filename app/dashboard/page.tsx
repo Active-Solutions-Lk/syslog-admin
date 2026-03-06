@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { getProjects } from "@/app/actions/project";
 import { getCollectors } from "@/app/actions/collectors";
 import { getAnalyzers } from "@/app/actions/analyzers";
@@ -51,11 +52,41 @@ export default function DashboardPage() {
   }, []);
 
   const cards = [
-    { title: "Total Projects", value: stats.projects, icon: FolderOpen, color: "text-blue-600" },
-    { title: "Collectors", value: stats.collectors, icon: Activity, color: "text-green-600" },
-    { title: "Analyzers", value: stats.analyzers, icon: Cpu, color: "text-purple-600" },
-    { title: "Resellers", value: stats.resellers, icon: UserCheck, color: "text-orange-600" },
-    { title: "End Customers", value: stats.customers, icon: Building, color: "text-cyan-600" },
+    {
+      title: "Total Projects",
+      value: stats.projects,
+      icon: FolderOpen,
+      color: "text-blue-600",
+      href: "/dashboard/projects"
+    },
+    {
+      title: "Collectors",
+      value: stats.collectors,
+      icon: Activity,
+      color: "text-green-600",
+      href: "/dashboard/collectors"
+    },
+    {
+      title: "Analyzers",
+      value: stats.analyzers,
+      icon: Cpu,
+      color: "text-purple-600",
+      href: "/dashboard/analyzers"
+    },
+    {
+      title: "Resellers",
+      value: stats.resellers,
+      icon: UserCheck,
+      color: "text-orange-600",
+      href: "/dashboard/resellers"
+    },
+    {
+      title: "End Customers",
+      value: stats.customers,
+      icon: Building,
+      color: "text-cyan-600",
+      href: "/dashboard/end-customer"
+    },
   ];
 
   return (
@@ -63,15 +94,17 @@ export default function DashboardPage() {
       <h1 className="text-2xl font-bold">Dashboard Overview</h1>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
-          <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-              <card.icon className={`h-4 w-4 ${card.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
-            </CardContent>
-          </Card>
+          <Link key={card.title} href={card.href}>
+            <Card className="cursor-pointer hover:shadow-md transition">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                <card.icon className={`h-4 w-4 ${card.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{card.value}</div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
     </div>
