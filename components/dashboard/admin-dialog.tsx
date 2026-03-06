@@ -16,11 +16,10 @@ import { ComboBox } from "@/components/dashboard/combo_box"
 
 interface Admin {
   id?: string
-  name: string
+  username: string
   email: string
   password?: string
   role: string
-  status: "active" | "inactive"
 }
 
 interface AdminDialogProps {
@@ -31,37 +30,28 @@ interface AdminDialogProps {
 }
 
 const roleOptions = [
-  { value: "Super Admin", label: "Super Admin" },
-  { value: "Admin", label: "Admin" },
-  { value: "Moderator", label: "Moderator" },
-  { value: "Support", label: "Support" },
-]
-
-const statusOptions = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
+  { value: "superadmin", label: "Super Admin" },
+  { value: "admin", label: "Admin" },
+  { value: "support", label: "Support" },
 ]
 
 export function AdminDialog({ open, onOpenChange, admin, onSave }: AdminDialogProps) {
-  const [name, setName] = React.useState(admin?.name || "")
+  const [username, setUsername] = React.useState(admin?.username || "")
   const [email, setEmail] = React.useState(admin?.email || "")
   const [password, setPassword] = React.useState("")
-  const [role, setRole] = React.useState(admin?.role || "Admin")
-  const [status, setStatus] = React.useState<"active" | "inactive">(admin?.status || "active")
+  const [role, setRole] = React.useState(admin?.role || "admin")
 
   React.useEffect(() => {
     if (admin) {
-      setName(admin.name)
+      setUsername(admin.username)
       setEmail(admin.email)
-      setPassword("") // Don't prefill password for security
+      setPassword("")
       setRole(admin.role)
-      setStatus(admin.status)
     } else {
-      setName("")
+      setUsername("")
       setEmail("")
       setPassword("")
-      setRole("Admin")
-      setStatus("active")
+      setRole("admin")
     }
   }, [admin, open])
 
@@ -69,11 +59,10 @@ export function AdminDialog({ open, onOpenChange, admin, onSave }: AdminDialogPr
     e.preventDefault()
     onSave({
       ...(admin?.id && { id: admin.id }),
-      name,
+      username,
       email,
-      ...(password && { password }), // Only include password if it's being set
+      ...(password && { password }),
       role,
-      status,
     })
   }
 
@@ -84,21 +73,21 @@ export function AdminDialog({ open, onOpenChange, admin, onSave }: AdminDialogPr
           <DialogHeader>
             <DialogTitle>{admin ? "Edit Admin" : "Add Admin"}</DialogTitle>
             <DialogDescription>
-              {admin 
-                ? "Make changes to the admin account here." 
-                : "Add a new admin account here."}
+              {admin
+                ? "Update admin account details."
+                : "Add a new admin account."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
+              <Label htmlFor="username" className="text-right">
+                Username
               </Label>
               <div className="col-span-3">
                 <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="w-full"
                   required
                 />
@@ -121,7 +110,7 @@ export function AdminDialog({ open, onOpenChange, admin, onSave }: AdminDialogPr
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="password" className="text-right">
-                {admin ? "Password" : "Password"}
+                Password
               </Label>
               <div className="col-span-3">
                 <Input
@@ -130,7 +119,7 @@ export function AdminDialog({ open, onOpenChange, admin, onSave }: AdminDialogPr
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full"
-                  {...(admin ? {} : { required: true })} // Only required when adding new admin
+                  {...(admin ? {} : { required: true })}
                 />
               </div>
             </div>
@@ -144,19 +133,6 @@ export function AdminDialog({ open, onOpenChange, admin, onSave }: AdminDialogPr
                   value={role}
                   onValueChange={setRole}
                   placeholder="Select a role..."
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="status" className="text-right">
-                Status
-              </Label>
-              <div className="col-span-3">
-                <ComboBox
-                  options={statusOptions}
-                  value={status}
-                  onValueChange={setStatus}
-                  placeholder="Select a status..."
                 />
               </div>
             </div>

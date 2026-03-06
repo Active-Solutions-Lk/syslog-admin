@@ -1,100 +1,99 @@
 import { PrismaClient } from '@prisma/client';
+import { NextResponse } from 'next/server';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
+
+function normalizeIpAddress(ip) {
+  if (ip && ip.startsWith('::ffff:')) return ip.substring(7);
+  return ip;
+}
+
+function parseSecureToken(secureToken, clientIp) {
+  try {
+    const decodedToken = Buffer.from(secureToken, 'base64').toString('utf-8');
+    const ipv4Pattern = /\d+\.\d+\.\d+\.\d+$/;
+    const ipv4Match = decodedToken.match(ipv4Pattern);
+    if (!ipv4Match) return null;
+    const ip = ipv4Match[0];
+    const firstColonIndex = decodedToken.indexOf(':');
+    if (firstColonIndex === -1) return null;
+    const activationKey = decodedToken.substring(0, firstColonIndex);
+    const parts = decodedToken.split(':');
+    return { activationKey, secret: parts[1], ip };
+  } catch (e) { return null; }
+}
 
 export async function POST(request) {
   try {
-    // Parse the request body
     const body = await request.json();
-    const { activationKey, secretKey, collectorIp, loggerIp } = body;
+    const { activation_key, secure_token, client_ip, port } = body;
+    const normalizedClientIp = normalizeIpAddress(client_ip);
 
-    // Validate the secret key
-    const expectedSecretKey = process.env.PROJECT_VALIDATION_SECRET;
-    if (!secretKey || secretKey !== expectedSecretKey) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid secret key',
-          success: false 
-        }),
-        { 
-          status: 401,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
+    if (!activation_key || !secure_token || !normalizedClientIp) {
+      return NextResponse.json({ success: false, error: 'Missing fields' }, { status: 400 });
     }
 
-    // Validate the activation key
+    const tokenData = parseSecureToken(secure_token, normalizedClientIp);
+    if (!tokenData || tokenData.activationKey !== activation_key) {
+      return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
+    }
+
+    const expectedSecret = process.env.PROJECT_VALIDATION_SECRET || 'I3UYA2HSQPB86XpsdVUb9szDu5tn2W3fOpg8';
+    if (tokenData.secret !== expectedSecret) {
+      return NextResponse.json({ success: false, error: 'Invalid secret' }, { status: 401 });
+    }
+
     const project = await prisma.projects.findFirst({
-      where: {
-        activation_key: activationKey
-      },
+      where: { activation_key },
       include: {
-        ports: true
+        port: true,
+        end_customer: true,
+        project_types: true
       }
     });
 
     if (!project) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid activation key',
-          success: false 
-        }),
-        { 
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
+      return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
     }
 
-    // Prepare update data
-    const updateData = {};
-    if (collectorIp) {
-      updateData.collector_ip = collectorIp;
-    }
-    if (loggerIp) {
-      updateData.loggert_ip = loggerIp;
+    if (port && project.port && project.port.port !== parseInt(port)) {
+      return NextResponse.json({ success: false, error: 'Port mismatch' }, { status: 400 });
     }
 
-    // Update the project with collector_ip or logger_ip if provided
-    if (Object.keys(updateData).length > 0) {
+    // Check analyzer
+    const analyzer = await prisma.analyzers.findFirst({ where: { ip: normalizedClientIp } });
+    if (analyzer && !project.analyzer_id) {
       await prisma.projects.update({
-        where: {
-          id: project.id
-        },
-        data: updateData
+        where: { id: project.id },
+        data: { analyzer_id: analyzer.id }
       });
     }
 
-    // Return success response with ports data
-    return new Response(
-      JSON.stringify({ 
-        success: true,
-        message: 'Project validated successfully',
+    return NextResponse.json({
+      success: true,
+      message: 'Validated',
+      data: {
         projectId: project.id,
-        ports: project.ports.map(port => ({
-          id: port.id,
-          port: port.port
-        }))
-      }),
-      { 
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        port: project.port?.port || null,
+        device_count: project.device_count,
+        company_name: project.end_customer?.company || 'N/A'
       }
-    );
+    });
+
   } catch (error) {
-    console.error('Error validating project:', error);
-    
-    return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error',
-        success: false 
-      }),
-      { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
+    console.error('Validation error:', error);
+    return NextResponse.json({ success: false, error: 'Server error' }, { status: 500 });
   } finally {
     await prisma.$disconnect();
   }
+}
+
+export async function GET() {
+  return NextResponse.json({ message: 'Project validation endpoint' });
 }

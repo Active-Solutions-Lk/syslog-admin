@@ -1,148 +1,82 @@
-"use client"
+import * as React from "react";
+import { getCurrentUserData } from "@/components/auth/user-data";
 
-import * as React from "react"
-import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
-  GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
-  Users,
-  Package,
-  Plug,
-  FolderOpen,
-  Building,
-  Key,
-  LayoutDashboard
-} from "lucide-react"
-
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { NavMain } from "@/components/nav-main";
+import { NavProjects } from "@/components/nav-projects";
+import { NavUser } from "@/components/nav-user";
+import { TeamSwitcher } from "@/components/team-switcher";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
-// Updated data based on Prisma schema models
+// Updated data using string identifiers for icons
 const data = {
-  user: {
-    name: "Admin",
-    email: "admin@example.com",
-    avatar: "/avatars/admin.jpg",
-  },
   teams: [
     {
       name: "Syslog Admin",
-      logo: GalleryVerticalEnd,
+      logo: "GalleryVerticalEnd",
       plan: "Enterprise",
     },
   ],
   navMain: [
     {
-      title: "Admin Management",
-      url: "#",
-      icon: Users,
-      items: [
-        {
-          title: "Admins",
-          url: "/dashboard/admins",
-        },
-        {
-          title: "Sessions",
-          url: "/dashboard/sessions",
-        },
-      ],
-    },
-    {
-      title: "Packages",
-      url: "#",
-      icon: Package,
-      items: [
-        {
-          title: "Package List",
-          url: "/dashboard/packages",
-        },
-        {
-          title: "Ports",
-          url: "/dashboard/ports",
-        },
-      ],
-    },
-    {
       title: "Projects",
       url: "#",
-      icon: FolderOpen,
+      icon: "FolderOpen",
       items: [
         {
           title: "Project List",
           url: "/dashboard/projects",
         },
         {
-          title: "Activation Keys",
-          url: "/dashboard/activation-keys",
+          title: "Devices",
+          url: "/dashboard/devices",
+        },
+        {
+          title: "Ports",
+          url: "/dashboard/ports",
+        },
+        {
+          title: "Collectors",
+          url: "/dashboard/collectors",
+        },
+        {
+          title: "Analyzers",
+          url: "/dashboard/analyzers",
         },
       ],
     },
     {
-      title: "Resellers",
+      title: "Customers",
       url: "#",
-      icon: Building,
+      icon: "Building",
       items: [
         {
           title: "Reseller List",
           url: "/dashboard/resellers",
         },
         {
-          title: "Companies",
-          url: "/dashboard/companies",
+          title: "End Customer List",
+          url: "/dashboard/end-customer",
         },
       ],
     },
-    // {
-    //   title: "Documentation",
-    //   url: "#",
-    //   icon: BookOpen,
-    //   items: [
-    //     {
-    //       title: "API Reference",
-    //       url: "#",
-    //     },
-    //     {
-    //       title: "User Guides",
-    //       url: "#",
-    //     },
-    //     {
-    //       title: "Tutorials",
-    //       url: "#",
-    //     },
-    //   ],
-    // },
     {
       title: "Settings",
       url: "#",
-      icon: Settings2,
+      icon: "Settings2",
       items: [
         {
-          title: "General",
-          url: "/dashboard/settings",
+          title: "Admins",
+          url: "/dashboard/admins",
         },
         {
-          title: "Database",
-          url: "/dashboard/database",
-        },
-        {
-          title: "Security",
-          url: "/dashboard/security",
+          title: "Project Types",
+          url: "/dashboard/project-types",
         },
       ],
     },
@@ -151,22 +85,17 @@ const data = {
     {
       name: "Dashboard",
       url: "/dashboard",
-      icon: LayoutDashboard,
-    }
-    // {
-    //   name: "Network Monitoring",
-    //   url: "#",
-    //   icon: PieChart,
-    // },
-    // {
-    //   name: "Device Management",
-    //   url: "#",
-    //   icon: Map,
-    // },
+      icon: "LayoutDashboard",
+    },
   ],
-}
+};
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export async function AppSidebar({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) {
+  // Fetch user data on the server side
+  const user = await getCurrentUserData();
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -177,9 +106,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

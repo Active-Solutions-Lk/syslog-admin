@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus } from "lucide-react"
+import { ChevronsUpDown, Plus, GalleryVerticalEnd } from "lucide-react"
 
 import {
   DropdownMenu,
@@ -19,21 +19,39 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
+// Map of string identifiers to actual components
+const iconMap = {
+  GalleryVerticalEnd: GalleryVerticalEnd,
+}
+
 export function TeamSwitcher({
   teams,
 }: {
   teams: {
     name: string
-    logo: React.ElementType
+    logo: string | React.ElementType
     plan: string
   }[]
 }) {
   const { isMobile } = useSidebar()
-  const [activeTeam, setActiveTeam] = React.useState(teams[0])
+  const [activeTeam, setActiveTeam] = React.useState({
+    ...teams[0],
+    logo: typeof teams[0].logo === 'string' 
+      ? iconMap[teams[0].logo as keyof typeof iconMap] || GalleryVerticalEnd
+      : teams[0].logo
+  })
 
   if (!activeTeam) {
     return null
   }
+
+  // Process teams to convert string identifiers to actual components
+  const processedTeams = teams.map(team => ({
+    ...team,
+    logo: typeof team.logo === 'string' 
+      ? iconMap[team.logo as keyof typeof iconMap] || GalleryVerticalEnd
+      : team.logo
+  }))
 
   return (
     <SidebarMenu>
@@ -45,7 +63,7 @@ export function TeamSwitcher({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                <activeTeam.logo className="size-4" />
+                {React.createElement(activeTeam.logo, { className: "size-4" })}
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{activeTeam.name}</span>
@@ -63,14 +81,14 @@ export function TeamSwitcher({
             <DropdownMenuLabel className="text-muted-foreground text-xs">
               Teams
             </DropdownMenuLabel>
-            {teams.map((team, index) => (
+            {processedTeams.map((team, index) => (
               <DropdownMenuItem
                 key={team.name}
                 onClick={() => setActiveTeam(team)}
                 className="gap-2 p-2"
               >
                 <div className="flex size-6 items-center justify-center rounded-md border">
-                  <team.logo className="size-3.5 shrink-0" />
+                  {React.createElement(team.logo, { className: "size-3.5 shrink-0" })}
                 </div>
                 {team.name}
                 <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>

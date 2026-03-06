@@ -1,67 +1,94 @@
 "use server";
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
+import { SignJWT } from 'jose';
+import { cookies } from 'next/headers';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+});
+
+async function getJwtSecret() {
+  const secret = process.env.JWT_SECRET || 'fallback_secret_key';
+  return new TextEncoder().encode(secret);
+}
+
+async function createToken(payload) {
+  const secret = await getJwtSecret();
+  const iat = Math.floor(Date.now() / 1000);
+  const exp = iat + 60 * 60 * 24; // 24 hours
+
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt(iat)
+    .setExpirationTime(exp)
+    .sign(secret);
+}
 
 export async function Login({ userName, password }) {
   try {
-    // Call the API endpoint to validate credentials
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        username: userName,
-        password: password,
-      }),
+    const admin = await prisma.admins.findFirst({
+      where: {
+        OR: [
+          { email: userName },
+          { username: userName }
+        ]
+      }
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      // For 401 errors (authentication failures), show the specific error message
-      if (response.status === 401) {
-        return {
-          success: false,
-          error: data.error || 'Invalid username or password',
-        };
-      }
-      
-      // For other errors, provide a generic message
-      return {
-        success: false,
-        error: data.error || 'Login failed. Please try again.',
-      };
+    if (!admin || !admin.password) {
+      return { success: false, error: 'Invalid username or password' };
     }
 
-    // In a real application, you would set a session cookie here
-    // For now, we'll just return the success response
+    const isValid = await bcrypt.compare(password, admin.password);
+
+    if (!isValid) {
+      return { success: false, error: 'Invalid username or password' };
+    }
+
+    const token = await createToken({
+      id: admin.id.toString(),
+      email: admin.email,
+      role: admin.role
+    });
+
+    const cookieStore = await cookies();
+    cookieStore.set('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 60 * 60 * 24,
+      path: '/',
+      sameSite: 'lax',
+    });
+
     return {
       success: true,
-      message: data.message,
-      admin: data.admin,
+      message: 'Login successful',
+      admin: {
+        id: admin.id.toString(),
+        email: admin.email,
+        username: admin.username,
+        role: admin.role
+      }
     };
   } catch (error) {
     console.error('Login action error:', error);
-    return {
-      success: false,
-      error: 'Invalid username or password',
-    };
+    return { success: false, error: 'Login failed. Please try again.' };
   }
 }
 
-export async function Register({ data }) {
-  // Implementation for registration
-  return {
-    success: false,
-    error: 'Registration not implemented',
-  };
-}
-
-export async function Session() {
-  // Implementation for session management
-  return {
-    success: false,
-    error: 'Session management not implemented',
-  };
+export async function Logout() {
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete('auth-token');
+    return { success: true, message: 'Logout successful' };
+  } catch (error) {
+    console.error('Logout action error:', error);
+    return { success: false, error: 'Logout failed.' };
+  }
 }

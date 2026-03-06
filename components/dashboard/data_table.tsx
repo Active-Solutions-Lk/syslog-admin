@@ -6,6 +6,7 @@ import {
   ColumnFiltersState,
   SortingState,
   VisibilityState,
+  PaginationState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
@@ -27,7 +28,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -42,7 +42,7 @@ interface DataTableProps<TData, TValue> {
   onAdd?: () => void
   onDelete?: (item: TData) => void
   onAdvancedView?: (item: TData) => void
-  searchField?: string // Field to search on
+  onHealthCheck?: (item: TData) => void
   tableName?: string // Name for display purposes
 }
 
@@ -53,22 +53,51 @@ export function DataTable<TData, TValue>({
   onAdd,
   onDelete,
   onAdvancedView,
-  searchField = "name",
+  onHealthCheck,
   tableName = "items",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
+  const [searchValue, setSearchValue] = React.useState("")
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
-  const [contextMenu, setContextMenu] = React.useState<{ 
-    x: number; 
-    y: number; 
-    row: any | null 
+  const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize: 8 })
+  const [contextMenu, setContextMenu] = React.useState<{
+    x: number;
+    y: number;
+    row: {
+      original: TData;
+    } | null
   } | null>(null)
 
+  // Filter data based on search value across all columns
+  const filteredData = React.useMemo(() => {
+    if (!searchValue) return data;
+
+    return data.filter((row) => {
+      // Check all columns for the search value
+      return Object.values(row as Record<string, unknown>).some((value: unknown) => {
+        if (value === null || value === undefined) return false;
+
+        // Handle nested objects
+        if (typeof value === 'object') {
+          // Recursively check nested object properties
+          return Object.values(value as Record<string, unknown>).some((nestedValue: unknown) => {
+            if (nestedValue === null || nestedValue === undefined) return false;
+            return nestedValue.toString().toLowerCase().includes(searchValue.toLowerCase());
+          });
+        }
+
+        // Handle primitive values
+        return value.toString().toLowerCase().includes(searchValue.toLowerCase());
+      });
+    });
+  }, [data, searchValue]);
+
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
+    onPaginationChange: setPagination,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -82,10 +111,13 @@ export function DataTable<TData, TValue>({
       columnFilters,
       columnVisibility,
       rowSelection,
+      pagination,
     },
   })
 
-  const handleContextMenu = React.useCallback((e: React.MouseEvent, row: any) => {
+  const handleContextMenu = React.useCallback((e: React.MouseEvent, row: {
+    original: TData;
+  }) => {
     e.preventDefault()
     setContextMenu({ x: e.clientX, y: e.clientY, row })
   }, [])
@@ -94,26 +126,41 @@ export function DataTable<TData, TValue>({
     setContextMenu(null)
   }, [])
 
-  const handleEdit = React.useCallback((item: any) => {
+  const handleEdit = React.useCallback((item: {
+    original: TData;
+  }) => {
     if (onEdit) {
       onEdit(item.original)
     }
     handleMenuClose()
   }, [onEdit, handleMenuClose])
 
-  const handleDelete = React.useCallback((item: any) => {
+  const handleDelete = React.useCallback((item: {
+    original: TData;
+  }) => {
     if (onDelete) {
       onDelete(item.original)
     }
     handleMenuClose()
   }, [onDelete, handleMenuClose])
 
-  const handleAdvancedView = React.useCallback((item: any) => {
+  const handleAdvancedView = React.useCallback((item: {
+    original: TData;
+  }) => {
     if (onAdvancedView) {
       onAdvancedView(item.original)
     }
     handleMenuClose()
   }, [onAdvancedView, handleMenuClose])
+
+  const handleHealthCheck = React.useCallback((item: {
+    original: TData;
+  }) => {
+    if (onHealthCheck) {
+      onHealthCheck(item.original)
+    }
+    handleMenuClose()
+  }, [onHealthCheck, handleMenuClose])
 
   // Close context menu when clicking elsewhere
   React.useEffect(() => {
@@ -136,15 +183,13 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="w-full">
-      <div className="flex items-center justify-between py-4">
+      <div className="flex items-center justify-between py-2">
         <div className="relative w-full max-w-sm">
           <SearchIcon className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
             placeholder={`Search ${tableName}...`}
-            value={(table.getColumn(searchField)?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn(searchField)?.setFilterValue(event.target.value)
-            }
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
             className="pl-8"
           />
         </div>
@@ -193,9 +238,9 @@ export function DataTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
@@ -230,12 +275,12 @@ export function DataTable<TData, TValue>({
       </div>
       {/* Context Menu Portal */}
       {contextMenu && (
-        <div 
+        <div
           id="data-table-context-menu"
           className="fixed z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
-          style={{ 
-            left: contextMenu.x, 
-            top: contextMenu.y 
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y
           }}
         >
           <div className="px-2 py-1.5 text-sm font-medium">Actions</div>
@@ -243,7 +288,7 @@ export function DataTable<TData, TValue>({
           {(onEdit || onAdd) && (
             <button
               className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden w-full text-left"
-              onClick={() => handleEdit(contextMenu.row)}
+              onClick={() => contextMenu?.row && handleEdit(contextMenu.row)}
             >
               Edit
             </button>
@@ -251,7 +296,7 @@ export function DataTable<TData, TValue>({
           {onDelete && (
             <button
               className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden w-full text-left"
-              onClick={() => handleDelete(contextMenu.row)}
+              onClick={() => contextMenu?.row && handleDelete(contextMenu.row)}
             >
               Delete
             </button>
@@ -259,9 +304,17 @@ export function DataTable<TData, TValue>({
           {onAdvancedView && (
             <button
               className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden w-full text-left"
-              onClick={() => handleAdvancedView(contextMenu.row)}
+              onClick={() => contextMenu?.row && handleAdvancedView(contextMenu.row)}
             >
-              Advanced View
+              Statics
+            </button>
+          )}
+          {onHealthCheck && (
+            <button
+              className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden w-full text-left"
+              onClick={() => contextMenu?.row && handleHealthCheck(contextMenu.row)}
+            >
+              Check Health
             </button>
           )}
         </div>
