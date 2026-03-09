@@ -151,6 +151,20 @@ export async function updateCollector(id, data) {
 
 export async function deleteCollector(id) {
   try {
+    // Check if any projects are using this collector
+    const linkedProject = await prisma.projects.findFirst({
+      where: {
+        collector_id: parseInt(id),
+      },
+    });
+
+    if (linkedProject) {
+      return {
+        success: false,
+        error: 'Cannot delete collector because it is assigned to an existing project.',
+      };
+    }
+
     await prisma.collectors.delete({
       where: { id: parseInt(id) },
     });
