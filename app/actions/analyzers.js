@@ -126,6 +126,20 @@ export async function updateAnalyzer({ id, name, ip, domain, status }) {
 
 export async function deleteAnalyzer(id) {
   try {
+    // Check if any projects are using this analyzer
+    const linkedProject = await prisma.projects.findFirst({
+      where: {
+        analyzer_id: parseInt(id),
+      },
+    });
+
+    if (linkedProject) {
+      return {
+        success: false,
+        error: 'Cannot delete analyzer because it is assigned to an existing project.',
+      };
+    }
+
     await prisma.analyzers.delete({
       where: { id: parseInt(id) },
     });

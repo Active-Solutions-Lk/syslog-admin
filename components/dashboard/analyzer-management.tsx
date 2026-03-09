@@ -65,7 +65,12 @@ export function AnalyzerManagement() {
     if (!a.id) return;
     if (window.confirm(`Delete analyzer ${a.name}?`)) {
       const result = await deleteAnalyzer(a.id);
-      if (result.success) setAnalyzers(analyzers.filter(p => p.id !== a.id));
+      if (result.success) {
+        setAnalyzers(analyzers.filter(p => p.id !== a.id));
+      } else {
+        // Display error if analyzer is linked to a project
+        alert(result.error);
+      }
     }
   };
 
