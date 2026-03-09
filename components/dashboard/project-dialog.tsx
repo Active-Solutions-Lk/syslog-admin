@@ -133,7 +133,7 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
               value: p.id,
               label: `Port ${p.port}`
             })),
-          });
+        });
 
         if (project) {
           if (project.id) fetchDevices(project.id);
@@ -255,7 +255,8 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
             </div>
             <div className="space-y-2">
               <Label>Analyzer</Label>
-              <ComboBox options={options.analyzers} value={analyzer_id} onValueChange={setAnalyzerId} placeholder="Select analyzer" />
+              {/* Analyzer should be only read mode for add project and enabled for edit project */}
+              <ComboBox options={options.analyzers} value={analyzer_id} onValueChange={setAnalyzerId} placeholder="Select analyzer" sr_only={!project} />
             </div>
             <div className="space-y-2">
               <Label>Port</Label>
