@@ -1,29 +1,26 @@
 "use server";
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
-});
+const prisma = new PrismaClient();
 
-// Function to generate a unique activation key
+/* ------------------------------
+   Activation Key Generator
+--------------------------------*/
+
 function generateActivationKey() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let key = '';
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let key = "";
+
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 4; j++) {
       key += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-    if (i < 2) key += '-';
+    if (i < 2) key += "-";
   }
   return key;
 }
 
-// Function to ensure the activation key is unique
 async function generateUniqueActivationKey() {
   let key;
   let isUnique = false;
@@ -47,30 +44,28 @@ export async function getProjects() {
         reseller: true,
         end_customer: true,
         collectors: true,
-        analyzers: true
+        analyzers: true,
       },
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: "desc" },
     });
 
     return {
       success: true,
-      projects: projects.map(p => ({
+      projects: projects.map((p) => ({
         ...p,
         id: p.id.toString(),
-        project_type_id: p.project_type_id.toString(),
+        project_type_id: p.project_type_id?.toString(),
         port_id: p.port_id?.toString(),
         admin_id: p.admin_id?.toString(),
         reseller_id: p.reseller_id?.toString(),
         end_customer_id: p.end_customer_id?.toString(),
-        collector_id: p.collector_id.toString(),
+        collector_id: p.collector_id?.toString(),
         analyzer_id: p.analyzer_id?.toString(),
       })),
     };
   } catch (error) {
-    console.error('Error fetching projects:', error);
-    return { success: false, error: 'Failed to fetch projects' };
-  } finally {
-    await prisma.$disconnect();
+    console.error("Error fetching projects:", error);
+    return { success: false, error: "Failed to fetch projects" };
   }
 }
 
@@ -85,132 +80,124 @@ export async function getProjectById(id) {
         reseller: true,
         end_customer: true,
         collectors: true,
-        analyzers: true
-      }
+        analyzers: true,
+      },
     });
 
-    if (!project) return { success: false, error: 'Project not found' };
+    if (!project) {
+      return { success: false, error: "Project not found" };
+    }
 
     return {
       success: true,
       project: {
         ...project,
         id: project.id.toString(),
-        project_type_id: project.project_type_id.toString(),
+        project_type_id: project.project_type_id?.toString(),
         port_id: project.port_id?.toString(),
         admin_id: project.admin_id?.toString(),
         reseller_id: project.reseller_id?.toString(),
         end_customer_id: project.end_customer_id?.toString(),
-        collector_id: project.collector_id.toString(),
+        collector_id: project.collector_id?.toString(),
         analyzer_id: project.analyzer_id?.toString(),
       },
     };
   } catch (error) {
-    console.error('Error fetching project:', error);
-    return { success: false, error: 'Failed to fetch project' };
-  } finally {
-    await prisma.$disconnect();
+    console.error("Error fetching project:", error);
+    return { success: false, error: "Failed to fetch project" };
   }
 }
 
-export async function createProject({
-  project_type_id,
-  port_id,
-  admin_id,
-  reseller_id,
-  end_customer_id,
-  collector_id,
-  analyzer_id,
-  device_count
-}) {
+export async function createProject(data) {
   try {
     const activation_key = await generateUniqueActivationKey();
 
-    // Check if collector and port combination already exists
     const existingCombination = await prisma.projects.findFirst({
       where: {
-        collector_id: parseInt(collector_id),
-        port_id: parseInt(port_id)
-      }
+        collector_id: parseInt(data.collector_id),
+        port_id: parseInt(data.port_id),
+      },
     });
 
     if (existingCombination) {
-      return { success: false, error: 'A project with this Collector and Port already exists.' };
+      return {
+        success: false,
+        error: "A project with this Collector and Port already exists.",
+      };
     }
 
     const project = await prisma.projects.create({
       data: {
         activation_key,
-        project_type_id: parseInt(project_type_id),
-        port_id: port_id ? parseInt(port_id) : null,
-        admin_id: parseInt(admin_id),
-        reseller_id: reseller_id ? parseInt(reseller_id) : null,
-        end_customer_id: end_customer_id ? parseInt(end_customer_id) : null,
-        collector_id: parseInt(collector_id),
-        analyzer_id: analyzer_id ? parseInt(analyzer_id) : null,
-        device_count: parseInt(device_count) || 5,
-      }
+        project_type_id: parseInt(data.project_type_id),
+        port_id: data.port_id ? parseInt(data.port_id) : null,
+        admin_id: parseInt(data.admin_id),
+        reseller_id: data.reseller_id ? parseInt(data.reseller_id) : null,
+        end_customer_id: data.end_customer_id
+          ? parseInt(data.end_customer_id)
+          : null,
+        collector_id: parseInt(data.collector_id),
+        analyzer_id: data.analyzer_id ? parseInt(data.analyzer_id) : null,
+        device_count: parseInt(data.device_count) || 5,
+      },
     });
 
-    return { success: true, project, message: 'Project created successfully' };
+    return {
+      success: true,
+      project,
+      message: "Project created successfully",
+    };
   } catch (error) {
-    console.error('Error creating project:', error);
-    return { success: false, error: 'Failed to create project' };
-  } finally {
-    await prisma.$disconnect();
+    console.error("Error creating project:", error);
+    return { success: false, error: "Failed to create project" };
   }
 }
 
-export async function updateProject({
-  id,
-  activation_key,
-  project_type_id,
-  port_id,
-  admin_id,
-  reseller_id,
-  end_customer_id,
-  collector_id,
-  analyzer_id,
-  device_count
-}) {
+export async function updateProject(data) {
   try {
-    // Check if collector and port combination already exists for another project
     const existingCombination = await prisma.projects.findFirst({
       where: {
-        collector_id: parseInt(collector_id),
-        port_id: parseInt(port_id),
+        collector_id: parseInt(data.collector_id),
+        port_id: parseInt(data.port_id),
         NOT: {
-          id: parseInt(id)
-        }
-      }
+          id: parseInt(data.id),
+        },
+      },
     });
 
     if (existingCombination) {
-      return { success: false, error: 'A project with this Collector and Port already exists.' };
+      return {
+        success: false,
+        error: "A project with this Collector and Port already exists.",
+      };
     }
 
     const project = await prisma.projects.update({
-      where: { id: parseInt(id) },
+      where: { id: parseInt(data.id) },
       data: {
-        activation_key,
-        project_type_id: parseInt(project_type_id),
-        port_id: port_id ? parseInt(port_id) : null,
-        admin_id: parseInt(admin_id),
-        reseller_id: reseller_id ? parseInt(reseller_id) : null,
-        end_customer_id: end_customer_id ? parseInt(end_customer_id) : null,
-        collector_id: parseInt(collector_id),
-        analyzer_id: analyzer_id ? parseInt(analyzer_id) : null,
-        device_count: parseInt(device_count),
-        updated_at: new Date()
-      }
+        activation_key: data.activation_key,
+        project_type_id: parseInt(data.project_type_id),
+        port_id: data.port_id ? parseInt(data.port_id) : null,
+        admin_id: parseInt(data.admin_id),
+        reseller_id: data.reseller_id ? parseInt(data.reseller_id) : null,
+        end_customer_id: data.end_customer_id
+          ? parseInt(data.end_customer_id)
+          : null,
+        collector_id: parseInt(data.collector_id),
+        analyzer_id: data.analyzer_id ? parseInt(data.analyzer_id) : null,
+        device_count: parseInt(data.device_count),
+        updated_at: new Date(),
+      },
     });
 
-    return { success: true, project, message: 'Project updated successfully' };
+    return {
+      success: true,
+      project,
+      message: "Project updated successfully",
+    };
   } catch (error) {
-    console.error('Error updating project:', error);
-    return { success: false, error: 'Failed to update project' };
-  } finally {
-    await prisma.$disconnect();
+    console.error("Error updating project:", error);
+    return { success: false, error: "Failed to update project" };
   }
 }
 
@@ -219,66 +206,94 @@ export async function deleteProject(id) {
     await prisma.projects.delete({
       where: { id: parseInt(id) },
     });
-    return { success: true, message: 'Project deleted successfully' };
+
+    return { success: true, message: "Project deleted successfully" };
   } catch (error) {
-    console.error('Error deleting project:', error);
-    return { success: false, error: 'Failed to delete project' };
-  } finally {
-    await prisma.$disconnect();
+    console.error("Error deleting project:", error);
+    return { success: false, error: "Failed to delete project" };
   }
 }
+
+/* ------------------------------
+   PROJECT TYPES
+--------------------------------*/
 
 export async function getProjectTypes() {
   try {
-    const types = await prisma.project_types.findMany();
-    return { success: true, projectTypes: types.map(t => ({ ...t, id: t.id.toString() })) };
+    const types = await prisma.project_types.findMany({
+      orderBy: { id: "desc" },
+    });
+
+    return {
+      success: true,
+      projectTypes: types.map((t) => ({
+        id: t.id.toString(),
+        type: t.type,
+        description: t.description,
+      })),
+    };
   } catch (error) {
-    console.error('Error fetching project types:', error);
-    return { success: false, error: 'Failed to fetch project types' };
-  } finally {
-    await prisma.$disconnect();
+    console.error("Error fetching project types:", error);
+    return { success: false, error: "Failed to fetch project types" };
   }
 }
 
-export async function createProjectType({ type }) {
+export async function createProjectType({ type, description }) {
   try {
     const newType = await prisma.project_types.create({
-      data: { type }
+      data: {
+        type,
+        description: description || null,
+      },
     });
-    return { success: true, projectType: { ...newType, id: newType.id.toString() } };
+
+    return {
+      success: true,
+      projectType: {
+        id: newType.id.toString(),
+        type: newType.type,
+        description: newType.description,
+      },
+    };
   } catch (error) {
-    console.error('Error creating project type:', error);
-    return { success: false, error: 'Failed to create project type' };
-  } finally {
-    await prisma.$disconnect();
+    console.error("Error creating project type:", error);
+    return { success: false, error: "Failed to create project type" };
   }
 }
 
-export async function updateProjectType({ id, type }) {
+export async function updateProjectType({ id, type, description }) {
   try {
     const updatedType = await prisma.project_types.update({
       where: { id: parseInt(id) },
-      data: { type }
+      data: {
+        type,
+        description: description || null,
+      },
     });
-    return { success: true, projectType: { ...updatedType, id: updatedType.id.toString() } };
+
+    return {
+      success: true,
+      projectType: {
+        id: updatedType.id.toString(),
+        type: updatedType.type,
+        description: updatedType.description,
+      },
+    };
   } catch (error) {
-    console.error('Error updating project type:', error);
-    return { success: false, error: 'Failed to update project type' };
-  } finally {
-    await prisma.$disconnect();
+    console.error("Error updating project type:", error);
+    return { success: false, error: "Failed to update project type" };
   }
 }
 
 export async function deleteProjectType(id) {
   try {
     await prisma.project_types.delete({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
     });
+
     return { success: true };
   } catch (error) {
-    console.error('Error deleting project type:', error);
-    return { success: false, error: 'Failed to delete project type' };
-  } finally {
-    await prisma.$disconnect();
+    console.error("Error deleting project type:", error);
+    return { success: false, error: "Failed to delete project type" };
   }
 }
