@@ -40,10 +40,11 @@ interface ProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project?: any;
+  allProjects?: any[]; // For checking existing collector/port combinations
   onSave: (data: any) => void;
 }
 
-export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDialogProps) {
+export function ProjectDialog({ open, onOpenChange, project, allProjects, onSave }: ProjectDialogProps) {
   const [activation_key, setActivationKey] = useState("");
   const [project_type_id, setProjectTypeId] = useState("");
   const [collector_id, setCollectorId] = useState("");
@@ -168,6 +169,23 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
     }
   }, [open, project]);
 
+  // Autofill the first available port when a collector is selected (only for new projects)
+  useEffect(() => {
+    // Only autofill if: it's a new project (!project), a collector is selected, ports are loaded, and port is currently empty
+    if (open && !project && collector_id && options.ports.length > 0 && !port_id) {
+      const usedPortIds = (allProjects || [])
+        .filter(p => p.collector_id === collector_id.toString())
+        .map(p => p.port_id?.toString());
+
+      // Find the first port ID from the list that is not in the used list for this collector
+      const availablePort = options.ports.find((p: any) => !usedPortIds.includes(p.value));
+
+      if (availablePort) {
+        setPortId(availablePort.value);
+      }
+    }
+  }, [collector_id, options.ports, allProjects, project, open, port_id]);
+
   // ... existing fetchDevices ...
   const fetchDevices = async (projectId: string) => {
     const result = await getDevicesByProjectId(projectId);
@@ -269,7 +287,23 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
             </div>
             <div className="space-y-2">
               <Label>Port</Label>
-              <ComboBox options={options.ports} value={port_id} onValueChange={setPortId} placeholder="Select port" />
+              {/* Autofill and filter ports based on selected collector to prevent duplicates */}
+              <ComboBox
+                options={options.ports.filter((p: any) => {
+                  // In add mode, hide ports already taken by this collector
+                  // In edit mode, allow the current project's port plus any untaken ones
+                  const isCurrentPort = project?.port_id?.toString() === p.value;
+                  const isTaken = (allProjects || []).some(ap =>
+                    ap.collector_id === collector_id &&
+                    ap.port_id === p.value &&
+                    ap.id !== project?.id
+                  );
+                  return isCurrentPort || !isTaken;
+                })}
+                value={port_id}
+                onValueChange={setPortId}
+                placeholder="Select port"
+              />
             </div>
             <div className="space-y-2">
               <Label>Admin</Label>

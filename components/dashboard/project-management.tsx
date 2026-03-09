@@ -174,6 +174,7 @@ export function ProjectManagement() {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         project={editingProject || undefined}
+        allProjects={projects}
         onSave={handleSaveProject}
       />
     </>

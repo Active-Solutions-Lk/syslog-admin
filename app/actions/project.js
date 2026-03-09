@@ -125,6 +125,19 @@ export async function createProject({
 }) {
   try {
     const activation_key = await generateUniqueActivationKey();
+
+    // Check if collector and port combination already exists
+    const existingCombination = await prisma.projects.findFirst({
+      where: {
+        collector_id: parseInt(collector_id),
+        port_id: parseInt(port_id)
+      }
+    });
+
+    if (existingCombination) {
+      return { success: false, error: 'A project with this Collector and Port already exists.' };
+    }
+
     const project = await prisma.projects.create({
       data: {
         activation_key,
@@ -161,6 +174,21 @@ export async function updateProject({
   device_count
 }) {
   try {
+    // Check if collector and port combination already exists for another project
+    const existingCombination = await prisma.projects.findFirst({
+      where: {
+        collector_id: parseInt(collector_id),
+        port_id: parseInt(port_id),
+        NOT: {
+          id: parseInt(id)
+        }
+      }
+    });
+
+    if (existingCombination) {
+      return { success: false, error: 'A project with this Collector and Port already exists.' };
+    }
+
     const project = await prisma.projects.update({
       where: { id: parseInt(id) },
       data: {
