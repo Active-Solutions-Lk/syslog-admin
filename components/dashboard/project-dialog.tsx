@@ -120,13 +120,22 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
         setOptions({
           types: sortOptions((types.projectTypes || []).map((t: any) => ({ value: t.id, label: t.type }))),
           admins: sortOptions((admins.admins || []).map((a: any) => ({ value: a.id, label: a.username }))),
-          resellers: sortOptions((resellers.resellers || []).map((r: any) => ({ value: r.id, label: r.company }))),
-          customers: sortOptions((customers.customers || []).map((c: any) => ({
-            value: c.id,
-            label: c.company || c.contact_person
-          }))),
-          collectors: sortOptions((collectors.collectors || []).map((c: any) => ({ value: c.id, label: c.name }))),
-          analyzers: sortOptions((analyzers.analyzers || []).map((a: any) => ({ value: a.id, label: a.name }))),
+          // Show only active entities in the form dropdowns
+          resellers: sortOptions((resellers.resellers || [])
+            .filter((r: any) => r.status === true)
+            .map((r: any) => ({ value: r.id, label: r.company }))),
+          customers: sortOptions((customers.customers || [])
+            .filter((c: any) => c.status === true)
+            .map((c: any) => ({
+              value: c.id,
+              label: c.company || c.contact_person
+            }))),
+          collectors: sortOptions((collectors.collectors || [])
+            .filter((c: any) => c.is_active === true)
+            .map((c: any) => ({ value: c.id, label: c.name }))),
+          analyzers: sortOptions((analyzers.analyzers || [])
+            .filter((a: any) => a.status === true)
+            .map((a: any) => ({ value: a.id, label: a.name }))),
           ports: (ports.ports || [])
             .sort((a: any, b: any) => a.port - b.port)
             .map((p: any) => ({
