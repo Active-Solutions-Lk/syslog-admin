@@ -14,6 +14,7 @@ interface Device {
     log_duration: number;
     package_start_at: string | Date;
     package_end_at: string | Date;
+    updated_at?: string | Date;
     projects?: {
         activation_key: string;
         end_customer?: {
@@ -68,6 +69,14 @@ const columns = [
             );
         }
     },
+    {
+    accessorKey: "updated_at",
+    header: "Updated Timestamps",
+    cell: ({ row }: any) =>
+        row.original.updated_at
+        ? format(new Date(row.original.updated_at), "MMM d, yyyy hh:mm a")
+        : "N/A"
+    }
 ];
 
 export function DeviceManagement() {
