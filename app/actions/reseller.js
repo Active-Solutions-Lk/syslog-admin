@@ -97,17 +97,38 @@ export async function createReseller({
   status
 }) {
   try {
+    // Validation for email and phone number
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+      return { success: false, error: 'Invalid email address format' };
+    }
+
+    const telRegex = /^[0-9\-\+ ]{7,15}$/;
+    if (tel && !telRegex.test(tel)) {
+      return { success: false, error: 'Invalid phone number format' };
+    }
+
+    // Check for unique company name
     const existingReseller = await prisma.reseller.findFirst({
       where: {
-        company,
+        OR: [
+          { company },
+          { email: email || undefined },
+          { tel }
+        ]
       },
     });
 
     if (existingReseller) {
-      return {
-        success: false,
-        error: 'Reseller with this company name already exists',
-      };
+      if (existingReseller.company === company) {
+        return { success: false, error: 'Reseller with this company name already exists' };
+      }
+      if (email && existingReseller.email === email) {
+        return { success: false, error: 'A reseller with this email address already exists' };
+      }
+      if (existingReseller.tel === tel) {
+        return { success: false, error: 'A reseller with this phone number already exists' };
+      }
     }
 
     const reseller = await prisma.reseller.create({
@@ -159,6 +180,45 @@ export async function updateReseller({
   status
 }) {
   try {
+    // Validation for email and phone number
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+      return { success: false, error: 'Invalid email address format' };
+    }
+
+    const telRegex = /^[0-9\-\+ ]{7,15}$/;
+    if (tel && !telRegex.test(tel)) {
+      return { success: false, error: 'Invalid phone number format' };
+    }
+
+    // Check for unique company name, email, and phone number for update
+    const existingConflict = await prisma.reseller.findFirst({
+      where: {
+        AND: [
+          { id: { not: parseInt(id) } },
+          {
+            OR: [
+              { company },
+              { email: email || undefined },
+              { tel }
+            ]
+          }
+        ]
+      }
+    });
+
+    if (existingConflict) {
+      if (existingConflict.company === company) {
+        return { success: false, error: 'Reseller with this company name already exists' };
+      }
+      if (email && existingConflict.email === email) {
+        return { success: false, error: 'A reseller with this email address already exists' };
+      }
+      if (existingConflict.tel === tel) {
+        return { success: false, error: 'A reseller with this phone number already exists' };
+      }
+    }
+
     const reseller = await prisma.reseller.update({
       where: {
         id: parseInt(id),

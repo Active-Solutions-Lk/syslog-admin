@@ -60,6 +60,20 @@ export function ResellerDialog({ open, onOpenChange, reseller, onSave }: Reselle
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Client-side validation for email and phone number
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+      alert("Invalid email address format");
+      return;
+    }
+
+    const telRegex = /^[0-9\-\+ ]{7,15}$/;
+    if (tel && !telRegex.test(tel)) {
+      alert("Invalid phone number format. Use 7-15 digits, spaces, -, or +.");
+      return;
+    }
+
     onSave({
       ...(reseller?.id && { id: reseller.id }),
       company,
