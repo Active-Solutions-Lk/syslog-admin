@@ -270,6 +270,20 @@ export async function updateReseller({
 
 export async function deleteReseller(id) {
   try {
+    // Check if any projects are using this reseller
+    const linkedProject = await prisma.projects.findFirst({
+      where: {
+        reseller_id: parseInt(id),
+      },
+    });
+
+    if (linkedProject) {
+      return {
+        success: false,
+        error: 'Cannot delete reseller because it is assigned to an existing project.',
+      };
+    }
+
     await prisma.reseller.delete({
       where: {
         id: parseInt(id),
