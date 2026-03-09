@@ -161,6 +161,20 @@ export async function updateEndCustomer(id, data) {
 
 export async function deleteEndCustomer(id) {
   try {
+    // Check if any projects are using this end customer
+    const linkedProject = await prisma.projects.findFirst({
+      where: {
+        end_customer_id: parseInt(id),
+      },
+    });
+
+    if (linkedProject) {
+      return {
+        success: false,
+        error: 'Cannot delete end-customer because it is assigned to an existing project.',
+      };
+    }
+
     await prisma.end_customer.delete({
       where: { id: parseInt(id) },
     });

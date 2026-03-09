@@ -96,6 +96,9 @@ export function EndCustomerManagement() {
         const result = await deleteEndCustomer(endCustomer.id);
         if (result.success) {
           setEndCustomers(endCustomers.filter(r => r.id !== endCustomer.id));
+        } else {
+          // Display error if customer is assigned to a project
+          alert(result.error);
         }
       } catch (error) {
         console.error('Error deleting end customer:', error);
