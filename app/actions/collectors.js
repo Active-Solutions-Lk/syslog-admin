@@ -50,6 +50,35 @@ export async function getCollectorById(id) {
 
 export async function createCollector(data) {
   try {
+    // Validation for IP address and Secret Key
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (data.ip && !ipRegex.test(data.ip)) {
+      return { success: false, error: 'Invalid IP address format' };
+    }
+
+    if (!data.secret_key || data.secret_key.length < 8) {
+      return { success: false, error: 'Secret Key is required and must be at least 8 characters long' };
+    }
+
+    // Check for unique IP address and Secret Key
+    const existingCollector = await prisma.collectors.findFirst({
+      where: {
+        OR: [
+          { ip: data.ip || undefined },
+          { secret_key: data.secret_key }
+        ]
+      },
+    });
+
+    if (existingCollector) {
+      if (data.ip && existingCollector.ip === data.ip) {
+        return { success: false, error: 'A collector with this IP address already exists' };
+      }
+      if (existingCollector.secret_key === data.secret_key) {
+        return { success: false, error: 'A collector with this secret key already exists' };
+      }
+    }
+
     const collector = await prisma.collectors.create({
       data: {
         name: data.name,
@@ -68,6 +97,40 @@ export async function createCollector(data) {
 
 export async function updateCollector(id, data) {
   try {
+    // Validation for IP address and Secret Key
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (data.ip && !ipRegex.test(data.ip)) {
+      return { success: false, error: 'Invalid IP address format' };
+    }
+
+    if (!data.secret_key || data.secret_key.length < 8) {
+      return { success: false, error: 'Secret Key is required and must be at least 8 characters long' };
+    }
+
+    // Check for unique IP address and Secret Key for update
+    const existingConflict = await prisma.collectors.findFirst({
+      where: {
+        AND: [
+          { id: { not: parseInt(id) } },
+          {
+            OR: [
+              { ip: data.ip || undefined },
+              { secret_key: data.secret_key }
+            ]
+          }
+        ]
+      }
+    });
+
+    if (existingConflict) {
+      if (data.ip && existingConflict.ip === data.ip) {
+        return { success: false, error: 'A collector with this IP address already exists' };
+      }
+      if (existingConflict.secret_key === data.secret_key) {
+        return { success: false, error: 'A collector with this secret key already exists' };
+      }
+    }
+
     const collector = await prisma.collectors.update({
       where: { id: parseInt(id) },
       data: {

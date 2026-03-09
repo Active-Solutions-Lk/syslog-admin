@@ -52,6 +52,19 @@ export function CollectorDialog({ open, onOpenChange, collector, onSave }: Colle
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Client-side validation for IP address and Secret Key
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (ip && !ipRegex.test(ip)) {
+      alert("Invalid IP address format. Use format x.x.x.x");
+      return;
+    }
+
+    if (!secretKey || secretKey.length < 8) {
+      alert("Secret Key is required and must be at least 8 characters long.");
+      return;
+    }
+
     onSave({
       ...(collector?.id && { id: collector.id }),
       name,
