@@ -56,6 +56,36 @@ export async function getEndCustomerById(id) {
 
 export async function createEndCustomer(data) {
   try {
+    // Validation for email and phone number
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (data.email && !emailRegex.test(data.email)) {
+      return { success: false, error: 'Invalid email address format' };
+    }
+
+    const telRegex = /^[0-9\-\+ ]{7,15}$/;
+    if (data.tel && !telRegex.test(data.tel)) {
+      return { success: false, error: 'Invalid phone number format' };
+    }
+
+    // Check for unique email and phone number
+    const existingCustomer = await prisma.end_customer.findFirst({
+      where: {
+        OR: [
+          { email: data.email || undefined },
+          { tel: data.tel }
+        ]
+      },
+    });
+
+    if (existingCustomer) {
+      if (data.email && existingCustomer.email === data.email) {
+        return { success: false, error: 'An end customer with this email address already exists' };
+      }
+      if (existingCustomer.tel === data.tel) {
+        return { success: false, error: 'An end customer with this phone number already exists' };
+      }
+    }
+
     const customer = await prisma.end_customer.create({
       data: {
         company: data.company,
@@ -75,6 +105,41 @@ export async function createEndCustomer(data) {
 
 export async function updateEndCustomer(id, data) {
   try {
+    // Validation for email and phone number
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (data.email && !emailRegex.test(data.email)) {
+      return { success: false, error: 'Invalid email address format' };
+    }
+
+    const telRegex = /^[0-9\-\+ ]{7,15}$/;
+    if (data.tel && !telRegex.test(data.tel)) {
+      return { success: false, error: 'Invalid phone number format' };
+    }
+
+    // Check for unique email and phone number for update
+    const existingConflict = await prisma.end_customer.findFirst({
+      where: {
+        AND: [
+          { id: { not: parseInt(id) } },
+          {
+            OR: [
+              { email: data.email || undefined },
+              { tel: data.tel }
+            ]
+          }
+        ]
+      }
+    });
+
+    if (existingConflict) {
+      if (data.email && existingConflict.email === data.email) {
+        return { success: false, error: 'An end customer with this email address already exists' };
+      }
+      if (existingConflict.tel === data.tel) {
+        return { success: false, error: 'An end customer with this phone number already exists' };
+      }
+    }
+
     const customer = await prisma.end_customer.update({
       where: { id: parseInt(id) },
       data: {
