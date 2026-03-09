@@ -53,6 +53,23 @@ export async function getAnalyzerById(id) {
 
 export async function createAnalyzer({ name, ip, domain, status }) {
   try {
+    // Validation for IP address
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (ip && !ipRegex.test(ip)) {
+      return { success: false, error: 'Invalid IP address format' };
+    }
+
+    // Check for unique IP address
+    const existingAnalyzer = await prisma.analyzers.findFirst({
+      where: {
+        ip: ip || undefined
+      }
+    });
+
+    if (existingAnalyzer) {
+      return { success: false, error: 'An analyzer with this IP address already exists' };
+    }
+
     const newAnalyzer = await prisma.analyzers.create({
       data: {
         name,
@@ -70,6 +87,26 @@ export async function createAnalyzer({ name, ip, domain, status }) {
 
 export async function updateAnalyzer({ id, name, ip, domain, status }) {
   try {
+    // Validation for IP address
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (ip && !ipRegex.test(ip)) {
+      return { success: false, error: 'Invalid IP address format' };
+    }
+
+    // Check for unique IP address for update
+    const existingConflict = await prisma.analyzers.findFirst({
+      where: {
+        AND: [
+          { id: { not: parseInt(id) } },
+          { ip: ip || undefined }
+        ]
+      }
+    });
+
+    if (existingConflict) {
+      return { success: false, error: 'An analyzer with this IP address already exists' };
+    }
+
     const updatedAnalyzer = await prisma.analyzers.update({
       where: { id: parseInt(id) },
       data: {
