@@ -104,11 +104,6 @@ export function DeviceManagement() {
         setIsDialogOpen(true);
     };
 
-    const handleAdd = () => {
-        setEditingDevice(null);
-        setIsDialogOpen(true);
-    };
-
     const handleDelete = async (d: Device) => {
         if (!d.id) return;
         if (window.confirm(`Delete device key ${d.device_key.substring(0, 8)}...?`)) {
@@ -146,7 +141,6 @@ export function DeviceManagement() {
                     columns={columns}
                     data={devices}
                     onEdit={handleEdit}
-                    onAdd={handleAdd}
                     onDelete={handleDelete}
                     tableName="devices"
                 />
