@@ -255,7 +255,8 @@ export function ProjectDialog({ open, onOpenChange, project, allProjects, onSave
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">
+      {/* Added overflow-x-hidden to remove the horizontal scroll bar */}
+      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <form onSubmit={handleSubmit}>
           {/* ... existing header ... */}
           {/* ... existing form fields ... */}
@@ -280,11 +281,13 @@ export function ProjectDialog({ open, onOpenChange, project, allProjects, onSave
               <Label>Collector</Label>
               <ComboBox options={options.collectors} value={collector_id} onValueChange={setCollectorId} placeholder="Select collector" />
             </div>
-            <div className="space-y-2">
-              <Label>Analyzer</Label>
-              {/* Analyzer should be only read mode for add project and enabled for edit project */}
-              <ComboBox options={options.analyzers} value={analyzer_id} onValueChange={setAnalyzerId} placeholder="Select analyzer" sr_only={!project} />
-            </div>
+            {/* Analyzer selection grid is only needed for edit project form */}
+            {project && (
+              <div className="space-y-2">
+                <Label>Analyzer</Label>
+                <ComboBox options={options.analyzers} value={analyzer_id} onValueChange={setAnalyzerId} placeholder="Select analyzer" />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Port</Label>
               {/* Autofill and filter ports based on selected collector to prevent duplicates */}
@@ -346,7 +349,8 @@ export function ProjectDialog({ open, onOpenChange, project, allProjects, onSave
                     <th className="p-2 w-24">Duration</th>
                     <th className="p-2 w-40">Starts</th>
                     <th className="p-2 w-40">Ends</th>
-                    <th className="p-2 text-right w-20">Actions</th>
+                    {/* Render Actions column only in Edit mode */}
+                    {project?.id && <th className="p-2 text-right w-20">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -409,9 +413,7 @@ export function ProjectDialog({ open, onOpenChange, project, allProjects, onSave
                           className="h-8"
                         />
                       </td>
-                      <td className="p-2 text-right">
-                        {/* Actions for local devices if needed, maybe simple X to clear? */}
-                      </td>
+                      {/* Removed empty Actions <td> for Add mode */}
                     </tr>
                   ))}
 
@@ -420,7 +422,7 @@ export function ProjectDialog({ open, onOpenChange, project, allProjects, onSave
                     <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No device keys generated</td></tr>
                   )}
                   {!project?.id && localDevices.length === 0 && (
-                    <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Set device count to generate keys</td></tr>
+                    <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">Set device count to generate keys</td></tr>
                   )}
                 </tbody>
               </table>
