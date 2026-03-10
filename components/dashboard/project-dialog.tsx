@@ -22,7 +22,7 @@ import { getAnalyzers } from "@/app/actions/analyzers";
 import { getPorts } from "@/app/actions/ports";
 import { getDevicesByProjectId, createDevice, deleteDevice } from "@/app/actions/devices";
 import { format } from "date-fns";
-import { Copy, Trash } from "lucide-react";
+import { Copy, Trash, RefreshCw } from "lucide-react";
 
 // sort options alphabetically
 const sortOptions = (arr: { value: string; label: string }[]) =>
@@ -57,6 +57,8 @@ export function ProjectDialog({ open, onOpenChange, project, allProjects, onSave
   const [devices, setDevices] = useState<any[]>([]);
   const [localDevices, setLocalDevices] = useState<any[]>([]); // New state for creating devices
   const [newDeviceLoading, setNewDeviceLoading] = useState(false);
+  
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
 
   // ... existing options state ...
   const [options, setOptions] = useState<any>({
@@ -253,6 +255,40 @@ export function ProjectDialog({ open, onOpenChange, project, allProjects, onSave
     });
   };
 
+  // copy to clipboard
+  const handleCopy = (text: string) => {
+    const fallbackCopy = () => {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    };
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => setCopySuccess("Copied to clipboard!"))
+          .catch(() => {
+            fallbackCopy();
+            setCopySuccess("Copied to clipboard!");
+          });
+      } else {
+        fallbackCopy();
+        setCopySuccess("Copied to clipboard!");
+      }
+    } catch (err) {
+      console.error("Copy failed", err);
+    }
+
+    // hide message after 2 seconds
+    setTimeout(() => setCopySuccess(null), 2000);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* Added overflow-x-hidden to remove the horizontal scroll bar */}
@@ -357,11 +393,20 @@ export function ProjectDialog({ open, onOpenChange, project, allProjects, onSave
                   {/* Render existing devices for Edit mode */}
                   {project?.id && devices.map((device) => (
                     <tr key={device.id} className="border-t">
-                      <td className="p-2 font-mono flex items-center gap-2">
+                      <td className="p-2 font-mono flex items-center gap-2 relative">
                         {device.device_key}
-                        <Button type="button" variant="ghost" size="icon" className="h-4 w-4" onClick={() => navigator.clipboard.writeText(device.device_key)}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-4 w-4"
+                        onClick={() => handleCopy(device.device_key)}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+
+                        {/* Success message */}
+                        {copySuccess && (
+                          <div className="fixed bottom-4 right-4 bg-green-500 text-white px-3 py-2 rounded shadow">
+                            {copySuccess}
+                          </div>
+                        )}
                       </td>
                       <td className="p-2">{device.log_duration}</td>
                       <td className="p-2">{format(new Date(device.package_start_at), "yyyy-MM-dd")}</td>
@@ -385,7 +430,7 @@ export function ProjectDialog({ open, onOpenChange, project, allProjects, onSave
                             className="h-8 font-mono text-xs"
                           />
                           <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={() => updateLocalDevice(index, 'device_key', generateHexKey())}>
-                            <Copy className="h-3 w-3 rotate-90" />
+                            <RefreshCw className="h-3 w-3 rotate-90" />
                           </Button>
                         </div>
                       </td>
