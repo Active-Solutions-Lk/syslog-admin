@@ -44,6 +44,10 @@ const columns = [
     header: "Telephone",
   },
   {
+    accessorKey: "email",
+    header: "Email",
+  },
+  {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }: CellContext<EndCustomer, unknown>) => (
