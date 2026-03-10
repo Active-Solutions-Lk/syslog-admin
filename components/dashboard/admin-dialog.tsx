@@ -40,8 +40,12 @@ export function AdminDialog({ open, onOpenChange, admin, onSave }: AdminDialogPr
   const [email, setEmail] = React.useState(admin?.email || "")
   const [password, setPassword] = React.useState("")
   const [role, setRole] = React.useState(admin?.role || "admin")
+  // Added state to hold the validation error message for review
+  const [error, setError] = React.useState("")
 
   React.useEffect(() => {
+    // Reset any validation errors when dialog opens or changes
+    setError("")
     if (admin) {
       setUsername(admin.username)
       setEmail(admin.email)
@@ -57,6 +61,17 @@ export function AdminDialog({ open, onOpenChange, admin, onSave }: AdminDialogPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Validate the password: Must be at least 6 characters
+    // Checks when creating a new admin OR updating an existing admin's password
+    if ((!admin || password) && password.length < 6) {
+      setError("Password must be at least 6 characters")
+      return; // Stop form submission and retain the form state
+    }
+
+    // Clear any previous error message when validation passes
+    setError("")
+
     onSave({
       ...(admin?.id && { id: admin.id }),
       username,
@@ -136,6 +151,12 @@ export function AdminDialog({ open, onOpenChange, admin, onSave }: AdminDialogPr
                 />
               </div>
             </div>
+            {/* Show password validation error message to the user here */}
+            {error && (
+              <div className="mt-2 rounded-md bg-destructive/15 p-3">
+                <p className="text-sm font-medium text-destructive text-center">{error}</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
