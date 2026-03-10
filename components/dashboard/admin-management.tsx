@@ -99,6 +99,10 @@ export function AdminManagement() {
         const result = await deleteAdmin(admin.id);
         if (result.success) {
           setAdmins(admins.filter(a => a.id !== admin.id));
+        } else {
+          // Display the error message cleanly so the user knows they cannot delete
+          // an admin when they are tied to a project.
+          alert(result.error);
         }
       } catch (error) {
         console.error('Error deleting admin:', error);
