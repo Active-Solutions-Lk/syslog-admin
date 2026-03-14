@@ -12,7 +12,7 @@ const prisma = new PrismaClient({
 
 export async function getEndCustomers() {
   try {
-    const endCustomers = await prisma.end_customer.findMany({
+    const customers = await prisma.end_customer.findMany({
       select: {
         id: true,
         company: true,
@@ -25,226 +25,162 @@ export async function getEndCustomers() {
         updated_at: true,
       },
     });
-    
-    // Convert id to string for frontend
-    const formattedEndCustomers = endCustomers.map(endCustomer => ({
-      ...endCustomer,
-      id: endCustomer.id.toString(),
-      status: endCustomer.status ? 'active' : 'inactive',
-      tel: endCustomer.tel.toString(),
-    }));
-    
+
     return {
       success: true,
-      endCustomers: formattedEndCustomers,
+      customers: customers.map(c => ({ ...c, id: c.id.toString() })),
     };
   } catch (error) {
     console.error('Error fetching end customers:', error);
-    return {
-      success: false,
-      error: 'Failed to fetch end customers',
-    };
+    return { success: false, error: 'Failed to fetch end customers' };
   }
 }
 
 export async function getEndCustomerById(id) {
   try {
-    const endCustomer = await prisma.end_customer.findUnique({
-      where: {
-        id: parseInt(id),
-      },
-      select: {
-        id: true,
-        company: true,
-        address: true,
-        contact_person: true,
-        tel: true,
-        email: true,
-        status: true,
-        created_at: true,
-        updated_at: true,
-      },
+    const customer = await prisma.end_customer.findUnique({
+      where: { id: parseInt(id) },
     });
-    
-    if (!endCustomer) {
-      return {
-        success: false,
-        error: 'End customer not found',
-      };
-    }
-    
-    // Convert id to string for frontend
-    const formattedEndCustomer = {
-      ...endCustomer,
-      id: endCustomer.id.toString(),
-      status: endCustomer.status ? 'active' : 'inactive',
-      tel: endCustomer.tel.toString(),
-    };
-    
+
+    if (!customer) return { success: false, error: 'End customer not found' };
+
     return {
       success: true,
-      endCustomer: formattedEndCustomer,
+      customer: { ...customer, id: customer.id.toString() },
     };
   } catch (error) {
     console.error('Error fetching end customer:', error);
-    return {
-      success: false,
-      error: 'Failed to fetch end customer',
-    };
+    return { success: false, error: 'Failed to fetch end customer' };
   }
 }
 
-export async function createEndCustomer({ 
-  company, 
-  address, 
-  contact_person, 
-  tel, 
-  email, 
-  status 
-}) {
+export async function createEndCustomer(data) {
   try {
-    // Get current date for timestamps
-    const now = new Date();
-    
-    // Create end customer
-    const endCustomer = await prisma.end_customer.create({
-      data: {
-        company: company || null,
-        address: address || null,
-        contact_person,
-        tel: parseInt(tel),
-        email: email || null,
-        status: status === 'active' ? true : false,
-        created_at: now,
-        updated_at: now,
-      },
-      select: {
-        id: true,
-        company: true,
-        address: true,
-        contact_person: true,
-        tel: true,
-        email: true,
-        status: true,
-        created_at: true,
-        updated_at: true,
+    // Validation for email and phone number
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (data.email && !emailRegex.test(data.email)) {
+      return { success: false, error: 'Invalid email address format' };
+    }
+
+    const telRegex = /^[0-9\-\+ ]{7,15}$/;
+    if (data.tel && !telRegex.test(data.tel)) {
+      return { success: false, error: 'Invalid phone number format' };
+    }
+
+    // Check for unique email and phone number
+    const existingCustomer = await prisma.end_customer.findFirst({
+      where: {
+        OR: [
+          { email: data.email || undefined },
+          { tel: data.tel }
+        ]
       },
     });
-    
-    // Convert id to string for frontend
-    const formattedEndCustomer = {
-      ...endCustomer,
-      id: endCustomer.id.toString(),
-      status: endCustomer.status ? 'active' : 'inactive',
-      tel: endCustomer.tel.toString(),
-    };
-    
-    return {
-      success: true,
-      endCustomer: formattedEndCustomer,
-      message: 'End customer created successfully',
-    };
+
+    if (existingCustomer) {
+      if (data.email && existingCustomer.email === data.email) {
+        return { success: false, error: 'An end customer with this email address already exists' };
+      }
+      if (existingCustomer.tel === data.tel) {
+        return { success: false, error: 'An end customer with this phone number already exists' };
+      }
+    }
+
+    const customer = await prisma.end_customer.create({
+      data: {
+        company: data.company,
+        address: data.address,
+        contact_person: data.contact_person,
+        tel: data.tel,
+        email: data.email,
+        status: data.status === undefined ? true : Boolean(data.status),
+      }
+    });
+    return { success: true, customer, message: 'End customer created successfully' };
   } catch (error) {
     console.error('Error creating end customer:', error);
-    return {
-      success: false,
-      error: 'Failed to create end customer',
-    };
+    return { success: false, error: 'Failed to create end customer' };
   }
 }
 
-export async function updateEndCustomer({ 
-  id, 
-  company, 
-  address, 
-  contact_person, 
-  tel, 
-  email, 
-  status 
-}) {
+export async function updateEndCustomer(id, data) {
   try {
-    // Get current date for updatedAt timestamp
-    const now = new Date();
-    
-    // Update end customer
-    const endCustomer = await prisma.end_customer.update({
+    // Validation for email and phone number
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (data.email && !emailRegex.test(data.email)) {
+      return { success: false, error: 'Invalid email address format' };
+    }
+
+    const telRegex = /^[0-9\-\+ ]{7,15}$/;
+    if (data.tel && !telRegex.test(data.tel)) {
+      return { success: false, error: 'Invalid phone number format' };
+    }
+
+    // Check for unique email and phone number for update
+    const existingConflict = await prisma.end_customer.findFirst({
       where: {
-        id: parseInt(id),
-      },
-      data: {
-        company: company || null,
-        address: address || null,
-        contact_person,
-        tel: parseInt(tel),
-        email: email || null,
-        status: status === 'active' ? true : false,
-        updated_at: now,
-      },
-      select: {
-        id: true,
-        company: true,
-        address: true,
-        contact_person: true,
-        tel: true,
-        email: true,
-        status: true,
-        created_at: true,
-        updated_at: true,
-      },
+        AND: [
+          { id: { not: parseInt(id) } },
+          {
+            OR: [
+              { email: data.email || undefined },
+              { tel: data.tel }
+            ]
+          }
+        ]
+      }
     });
-    
-    // Convert id to string for frontend
-    const formattedEndCustomer = {
-      ...endCustomer,
-      id: endCustomer.id.toString(),
-      status: endCustomer.status ? 'active' : 'inactive',
-      tel: endCustomer.tel.toString(),
-    };
-    
-    return {
-      success: true,
-      endCustomer: formattedEndCustomer,
-      message: 'End customer updated successfully',
-    };
+
+    if (existingConflict) {
+      if (data.email && existingConflict.email === data.email) {
+        return { success: false, error: 'An end customer with this email address already exists' };
+      }
+      if (existingConflict.tel === data.tel) {
+        return { success: false, error: 'An end customer with this phone number already exists' };
+      }
+    }
+
+    const customer = await prisma.end_customer.update({
+      where: { id: parseInt(id) },
+      data: {
+        company: data.company,
+        address: data.address,
+        contact_person: data.contact_person,
+        tel: data.tel,
+        email: data.email,
+        status: Boolean(data.status),
+        updated_at: new Date()
+      }
+    });
+    return { success: true, customer, message: 'End customer updated successfully' };
   } catch (error) {
     console.error('Error updating end customer:', error);
-    if (error.code === 'P2025') {
-      return {
-        success: false,
-        error: 'End customer not found',
-      };
-    }
-    return {
-      success: false,
-      error: 'Failed to update end customer',
-    };
+    return { success: false, error: 'Failed to update end customer' };
   }
 }
 
 export async function deleteEndCustomer(id) {
   try {
-    // Delete end customer
-    await prisma.end_customer.delete({
+    // Check if any projects are using this end customer
+    const linkedProject = await prisma.projects.findFirst({
       where: {
-        id: parseInt(id),
+        end_customer_id: parseInt(id),
       },
     });
-    
-    return {
-      success: true,
-      message: 'End customer deleted successfully',
-    };
-  } catch (error) {
-    console.error('Error deleting end customer:', error);
-    if (error.code === 'P2025') {
+
+    if (linkedProject) {
       return {
         success: false,
-        error: 'End customer not found',
+        error: 'Cannot delete end-customer because it is assigned to an existing project.',
       };
     }
-    return {
-      success: false,
-      error: 'Failed to delete end customer',
-    };
+
+    await prisma.end_customer.delete({
+      where: { id: parseInt(id) },
+    });
+    return { success: true, message: 'End customer deleted successfully' };
+  } catch (error) {
+    console.error('Error deleting end customer:', error);
+    return { success: false, error: 'Failed to delete end customer' };
   }
 }

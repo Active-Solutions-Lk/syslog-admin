@@ -12,7 +12,6 @@ const prisma = new PrismaClient({
 
 export async function getAnalyzers() {
   try {
-    // First, get all analyzers
     const analyzers = await prisma.analyzers.findMany({
       select: {
         id: true,
@@ -24,215 +23,129 @@ export async function getAnalyzers() {
         updated_at: true,
       },
     });
-    
-    // Convert ids to strings for frontend
-    const formattedAnalyzers = analyzers.map(analyzer => ({
-      ...analyzer,
-      id: analyzer.id.toString(),
-      status: Number(analyzer.status),
-    }));
-    
+
     return {
       success: true,
-      analyzers: formattedAnalyzers,
+      analyzers: analyzers.map(analyzer => ({
+        ...analyzer,
+        id: analyzer.id.toString(),
+        // status is returned as boolean from Prisma
+      })),
     };
   } catch (error) {
     console.error('Error fetching analyzers:', error);
-    return {
-      success: false,
-      error: 'Failed to fetch analyzers',
-    };
-  } finally {
-    await prisma.$disconnect();
+    return { success: false, error: 'Failed to fetch analyzers' };
   }
 }
 
 export async function getAnalyzerById(id) {
   try {
     const analyzer = await prisma.analyzers.findUnique({
-      where: {
-        id: parseInt(id),
-      },
-      select: {
-        id: true,
-        name: true,
-        ip: true,
-        domain: true,
-        status: true,
-        created_at: true,
-        updated_at: true,
-      },
+      where: { id: parseInt(id) },
     });
-    
-    if (!analyzer) {
-      return {
-        success: false,
-        error: 'Analyzer not found',
-      };
-    }
-    
-    // Convert ids to strings for frontend
-    const formattedAnalyzer = {
-      ...analyzer,
-      id: analyzer.id.toString(),
-      status: Number(analyzer.status),
-    };
-    
-    return {
-      success: true,
-      analyzer: formattedAnalyzer,
-    };
+    if (!analyzer) return { success: false, error: 'Analyzer not found' };
+    return { success: true, analyzer: { ...analyzer, id: analyzer.id.toString() } };
   } catch (error) {
     console.error('Error fetching analyzer:', error);
-    return {
-      success: false,
-      error: 'Failed to fetch analyzer',
-    };
-  } finally {
-    await prisma.$disconnect();
+    return { success: false, error: 'Failed to fetch analyzer' };
   }
 }
 
-export async function createAnalyzer({ 
-  name,
-  ip,
-  domain,
-  status
-}) {
+export async function createAnalyzer({ name, ip, domain, status }) {
   try {
-    // Get current date for timestamps
-    const now = new Date();
-    
-    // Create analyzer
+    // Validation for IP address
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (ip && !ipRegex.test(ip)) {
+      return { success: false, error: 'Invalid IP address format' };
+    }
+
+    // Check for unique IP address
+    const existingAnalyzer = await prisma.analyzers.findFirst({
+      where: {
+        ip: ip || undefined
+      }
+    });
+
+    if (existingAnalyzer) {
+      return { success: false, error: 'An analyzer with this IP address already exists' };
+    }
+
     const newAnalyzer = await prisma.analyzers.create({
       data: {
-        name: name,
-        ip: ip,
-        domain: domain,
-        status: Number(status),
-        created_at: now,
-        updated_at: now,
-      },
-      select: {
-        id: true,
-        name: true,
-        ip: true,
-        domain: true,
-        status: true,
-        created_at: true,
-        updated_at: true,
-      },
+        name,
+        ip,
+        domain,
+        status: status !== undefined ? Boolean(status) : true,
+      }
     });
-    
-    // Convert ids to strings for frontend
-    const formattedAnalyzer = {
-      ...newAnalyzer,
-      id: newAnalyzer.id.toString(),
-      status: Number(newAnalyzer.status),
-    };
-    
-    return {
-      success: true,
-      analyzer: formattedAnalyzer,
-      message: 'Analyzer created successfully',
-    };
+    return { success: true, analyzer: { ...newAnalyzer, id: newAnalyzer.id.toString() }, message: 'Analyzer created successfully' };
   } catch (error) {
     console.error('Error creating analyzer:', error);
-    return {
-      success: false,
-      error: 'Failed to create analyzer',
-    };
-  } finally {
-    await prisma.$disconnect();
+    return { success: false, error: 'Failed to create analyzer' };
   }
 }
 
-export async function updateAnalyzer({ 
-  id,
-  name,
-  ip,
-  domain,
-  status
-}) {
+export async function updateAnalyzer({ id, name, ip, domain, status }) {
   try {
-    // Update analyzer
-    const updatedAnalyzer = await prisma.analyzers.update({
+    // Validation for IP address
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (ip && !ipRegex.test(ip)) {
+      return { success: false, error: 'Invalid IP address format' };
+    }
+
+    // Check for unique IP address for update
+    const existingConflict = await prisma.analyzers.findFirst({
       where: {
-        id: parseInt(id),
-      },
-      data: {
-        name: name,
-        ip: ip,
-        domain: domain,
-        status: Number(status),
-        updated_at: new Date(),
-      },
-      select: {
-        id: true,
-        name: true,
-        ip: true,
-        domain: true,
-        status: true,
-        created_at: true,
-        updated_at: true,
-      },
+        AND: [
+          { id: { not: parseInt(id) } },
+          { ip: ip || undefined }
+        ]
+      }
     });
-    
-    // Convert ids to strings for frontend
-    const formattedAnalyzer = {
-      ...updatedAnalyzer,
-      id: updatedAnalyzer.id.toString(),
-      status: Number(updatedAnalyzer.status),
-    };
-    
-    return {
-      success: true,
-      analyzer: formattedAnalyzer,
-      message: 'Analyzer updated successfully',
-    };
+
+    if (existingConflict) {
+      return { success: false, error: 'An analyzer with this IP address already exists' };
+    }
+
+    const updatedAnalyzer = await prisma.analyzers.update({
+      where: { id: parseInt(id) },
+      data: {
+        name,
+        ip,
+        domain,
+        status: Boolean(status),
+        updated_at: new Date()
+      }
+    });
+    return { success: true, analyzer: { ...updatedAnalyzer, id: updatedAnalyzer.id.toString() }, message: 'Analyzer updated successfully' };
   } catch (error) {
     console.error('Error updating analyzer:', error);
-    if (error.code === 'P2025') {
-      return {
-        success: false,
-        error: 'Analyzer not found',
-      };
-    }
-    return {
-      success: false,
-      error: 'Failed to update analyzer',
-    };
-  } finally {
-    await prisma.$disconnect();
+    return { success: false, error: 'Failed to update analyzer' };
   }
 }
 
 export async function deleteAnalyzer(id) {
   try {
-    // Delete analyzer
-    await prisma.analyzers.delete({
+    // Check if any projects are using this analyzer
+    const linkedProject = await prisma.projects.findFirst({
       where: {
-        id: parseInt(id),
+        analyzer_id: parseInt(id),
       },
     });
-    
-    return {
-      success: true,
-      message: 'Analyzer deleted successfully',
-    };
-  } catch (error) {
-    console.error('Error deleting analyzer:', error);
-    if (error.code === 'P2025') {
+
+    if (linkedProject) {
       return {
         success: false,
-        error: 'Analyzer not found',
+        error: 'Cannot delete analyzer because it is assigned to an existing project.',
       };
     }
-    return {
-      success: false,
-      error: 'Failed to delete analyzer',
-    };
-  } finally {
-    await prisma.$disconnect();
+
+    await prisma.analyzers.delete({
+      where: { id: parseInt(id) },
+    });
+    return { success: true, message: 'Analyzer deleted successfully' };
+  } catch (error) {
+    console.error('Error deleting analyzer:', error);
+    return { success: false, error: 'Failed to delete analyzer' };
   }
 }

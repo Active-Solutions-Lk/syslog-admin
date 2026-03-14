@@ -15,25 +15,40 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 
-// Define the data structure for our API log data
-interface ChartDataPoint {
-  date: string;
+export interface ChartDataPoint {
+  timestamp: string;
   value: number;
 }
 
 interface ApiLogChartProps {
-  chartData?: ChartDataPoint[];
+  data?: ChartDataPoint[];
   title?: string;
   description?: string;
+  dataKey?: string;
+  color?: string;
+  height?: number;
 }
 
-export function ApiLogChart({ 
-  chartData = [], 
-  title = "API Log Data", 
-  description = "Metrics over time"
+export function ApiLogChart({
+  data = [],
+  title = "API Log Data",
+  description = "Metrics over time",
+  dataKey = "value",
+  color = "#3b82f6", // Default blue color
+  height = 200
 }: ApiLogChartProps) {
+  // Create a gradient ID based on the color
+  const gradientId = `gradient-${dataKey}-${color.replace('#', '')}`;
+
+  const chartConfig = {
+    [dataKey]: {
+      label: title,
+      color: color,
+    },
+  };
+
   // If no data, show a message
-  if (!chartData || chartData.length === 0) {
+  if (!data || data.length === 0) {
     return (
       <Card className="pt-0">
         <CardHeader className="flex items-center gap-2 space-y-0 border-b py-3 sm:flex-row">
@@ -53,14 +68,6 @@ export function ApiLogChart({
     );
   }
 
-  // Chart configuration specific to our API logs
-  const chartConfig = {
-    value: {
-      label: title,
-      color: "var(--chart-1)",
-    },
-  };
-
   return (
     <Card className="pt-0">
       <CardHeader className="flex items-center gap-2 space-y-0 border-b py-3 sm:flex-row">
@@ -74,41 +81,36 @@ export function ApiLogChart({
       <CardContent className="px-2 pt-2 sm:px-4 sm:pt-4">
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-[200px] w-full"
+          className={`aspect-auto h-[${height}px] w-full`}
         >
-          <AreaChart data={chartData}>
+          <AreaChart data={data}>
             <defs>
-              <linearGradient id="fillValue" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
-                  stopColor="var(--color-value)"
+                  stopColor={color}
                   stopOpacity={0.8}
                 />
                 <stop
                   offset="95%"
-                  stopColor="var(--color-value)"
+                  stopColor={color}
                   stopOpacity={0.1}
                 />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <CartesianGrid vertical={false} />
             <XAxis
-              dataKey="date"
+              dataKey="timestamp"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               minTickGap={32}
               tickFormatter={(value) => {
-                // Format date as MM/DD
-                if (value.includes('-')) {
-                  const date = new Date(value);
-                  return date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
-                }
                 return value;
               }}
             />
             <YAxis
-              domain={[0, 'dataMax']}
+              domain={[0, 100]}
               tickLine={false}
               axisLine={false}
               tickMargin={8}
@@ -116,25 +118,14 @@ export function ApiLogChart({
             />
             <ChartTooltip
               cursor={false}
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(value) => {
-                    return new Date(value).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })
-                  }}
-                  indicator="dot"
-                />
-              }
+              content={<ChartTooltipContent indicator="dot" />}
             />
             <Area
               dataKey="value"
               type="monotone"
-              fill="url(#fillValue)"
-              stroke="var(--color-value)"
+              fill={`url(#${gradientId})`}
+              stroke={color}
               strokeWidth={2}
-              name={title}
             />
           </AreaChart>
         </ChartContainer>

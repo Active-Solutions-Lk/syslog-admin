@@ -42,6 +42,7 @@ interface DataTableProps<TData, TValue> {
   onAdd?: () => void
   onDelete?: (item: TData) => void
   onAdvancedView?: (item: TData) => void
+  onHealthCheck?: (item: TData) => void
   tableName?: string // Name for display purposes
 }
 
@@ -52,6 +53,7 @@ export function DataTable<TData, TValue>({
   onAdd,
   onDelete,
   onAdvancedView,
+  onHealthCheck,
   tableName = "items",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -60,23 +62,23 @@ export function DataTable<TData, TValue>({
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
   const [rowSelection, setRowSelection] = React.useState({})
   const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize: 8 })
-  const [contextMenu, setContextMenu] = React.useState<{ 
-    x: number; 
-    y: number; 
+  const [contextMenu, setContextMenu] = React.useState<{
+    x: number;
+    y: number;
     row: {
       original: TData;
-    } | null 
+    } | null
   } | null>(null)
 
   // Filter data based on search value across all columns
   const filteredData = React.useMemo(() => {
     if (!searchValue) return data;
-    
+
     return data.filter((row) => {
       // Check all columns for the search value
       return Object.values(row as Record<string, unknown>).some((value: unknown) => {
         if (value === null || value === undefined) return false;
-        
+
         // Handle nested objects
         if (typeof value === 'object') {
           // Recursively check nested object properties
@@ -85,7 +87,7 @@ export function DataTable<TData, TValue>({
             return nestedValue.toString().toLowerCase().includes(searchValue.toLowerCase());
           });
         }
-        
+
         // Handle primitive values
         return value.toString().toLowerCase().includes(searchValue.toLowerCase());
       });
@@ -151,6 +153,15 @@ export function DataTable<TData, TValue>({
     handleMenuClose()
   }, [onAdvancedView, handleMenuClose])
 
+  const handleHealthCheck = React.useCallback((item: {
+    original: TData;
+  }) => {
+    if (onHealthCheck) {
+      onHealthCheck(item.original)
+    }
+    handleMenuClose()
+  }, [onHealthCheck, handleMenuClose])
+
   // Close context menu when clicking elsewhere
   React.useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -198,20 +209,19 @@ export function DataTable<TData, TValue>({
               <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
+              .getAllColumns()
+              .filter((column) => column.getCanHide())
+              .sort((a, b) => a.id.localeCompare(b.id))
+              .map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  className="capitalize"
+                  checked={column.getIsVisible()}
+                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                >
+                  {column.id.replace(/_/g, " ")}
+                </DropdownMenuCheckboxItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -227,9 +237,9 @@ export function DataTable<TData, TValue>({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
@@ -264,12 +274,12 @@ export function DataTable<TData, TValue>({
       </div>
       {/* Context Menu Portal */}
       {contextMenu && (
-        <div 
+        <div
           id="data-table-context-menu"
           className="fixed z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
-          style={{ 
-            left: contextMenu.x, 
-            top: contextMenu.y 
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y
           }}
         >
           <div className="px-2 py-1.5 text-sm font-medium">Actions</div>
@@ -296,6 +306,14 @@ export function DataTable<TData, TValue>({
               onClick={() => contextMenu?.row && handleAdvancedView(contextMenu.row)}
             >
               Statics
+            </button>
+          )}
+          {onHealthCheck && (
+            <button
+              className="focus:bg-accent focus:text-accent-foreground relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-hidden w-full text-left"
+              onClick={() => contextMenu?.row && handleHealthCheck(contextMenu.row)}
+            >
+              Check Health
             </button>
           )}
         </div>

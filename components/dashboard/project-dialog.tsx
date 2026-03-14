@@ -11,630 +11,472 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch"; // Add this import
 import { ComboBox } from "@/components/dashboard/combo_box";
 import { useState, useEffect } from "react";
-import {
-  getPackages,
-  getAvailablePorts,
-  getPortById,
-  getProjectTypes,
-} from "@/app/actions/project";
+import { getProjectTypes } from "@/app/actions/project";
 import { getAdmins } from "@/app/actions/admin";
 import { getResellers } from "@/app/actions/reseller";
 import { getEndCustomers } from "@/app/actions/end-customer";
-import { getCollectors } from "@/app/actions/collectors"; // Add this import
-import { getAnalyzers } from "@/app/actions/analyzers"; // Add this import
+import { getCollectors } from "@/app/actions/collectors";
+import { getAnalyzers } from "@/app/actions/analyzers";
+import { getPorts } from "@/app/actions/ports";
+import { getDevicesByProjectId, createDevice, deleteDevice } from "@/app/actions/devices";
+import { format } from "date-fns";
+import { Copy, Trash, RefreshCw } from "lucide-react";
 
-// Function to generate a unique activation key in format AB12-CD34-EF58
+// sort options alphabetically
+const sortOptions = (arr: { value: string; label: string }[]) =>
+  arr.sort((a, b) =>
+    a.label.localeCompare(b.label, undefined, { sensitivity: "base" })
+  );
+
 const generateActivationKey = () => {
-  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const segments = 3;
-  const segmentLength = 4;
-  const segmentsArray = [];
-
-  for (let i = 0; i < segments; i++) {
-    let segment = "";
-    for (let j = 0; j < segmentLength; j++) {
-      segment += characters.charAt(
-        Math.floor(Math.random() * characters.length)
-      );
-    }
-    segmentsArray.push(segment);
-  }
-
-  return segmentsArray.join("-");
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const gen = () => Array.from({ length: 4 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join("");
+  return `${gen()}-${gen()}-${gen()}`;
 };
-
-interface Project {
-  id?: string;
-  activation_key?: string;
-  secret_key?: string; // Secret key is only used on the backend
-  collector_ip: string | null; // This will now be the collector ID
-  logger_ip: string | null;
-  pkg_id: string;
-  admin_id?: string | null;
-  reseller_id?: string | null;
-  port_id?: string | null;
-  end_customer_id?: string | null;
-  type?: string;
-  status?: boolean;
-  is_active_coll?: number;
-  is_active_an?: number;
-  created_at?: Date;
-  updated_at?: Date;
-  admins?: {
-    name: string | null;
-    email: string;
-  } | null;
-  reseller?: {
-    company_name: string;
-  } | null;
-  end_customer?: {
-    company: string | null;
-  } | null;
-  packages?: {
-    name: string;
-  } | null;
-  collector?: {
-    // Add collector field
-    name: string | null;
-  } | null;
-}
-
-// Interfaces for dropdown options
-interface PackageOption {
-  id: string;
-  name: string;
-}
-
-interface AdminOption {
-  id: string;
-  name: string | null;
-  email: string;
-}
-
-interface ResellerOption {
-  customer_id: string;
-  company_name: string;
-}
-
-interface EndCustomerOption {
-  id: string;
-  company: string | null;
-}
-
-interface ProjectTypeOption {
-  id: string;
-  name: string | null;
-}
-
-interface CollectorOption {
-  id: string;
-  name: string | null;
-  ip: string | null;
-}
-
-interface PortOption {
-  id: string;
-  port: number;
-}
 
 interface ProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  project?: Project;
-  onSave: (project: Project) => void;
+  project?: any;
+  allProjects?: any[]; // For checking existing collector/port combinations
+  onSave: (data: any) => void;
 }
 
-export function ProjectDialog({
-  open,
-  onOpenChange,
-  project,
-  onSave,
-}: ProjectDialogProps) {
-  const [collector_ip, setCollectorIp] = useState<string | null>(null); // Change to string | null
-  const [analyzer_id, setAnalyzerId] = useState<string | null>(null);
-  const [pkg_id, setPkgId] = useState("");
-  const [admin_id, setAdminId] = useState<string | null>(null);
-  const [reseller_id, setResellerId] = useState<string | null>(null);
-  const [port_id, setPortId] = useState<string | null>(null);
-  const [end_customer_id, setEndCustomerId] = useState<string | null>(null);
-  const [type, setType] = useState<string>("");
-  const [status, setStatus] = useState<boolean>(true); // Default to enabled
-  const [is_active_coll_bool, setIsActiveCollBool] = useState<boolean>(true);
-  const [is_active_an_bool, setIsActiveAnBool] = useState<boolean>(true);
+export function ProjectDialog({ open, onOpenChange, project, allProjects, onSave }: ProjectDialogProps) {
   const [activation_key, setActivationKey] = useState("");
-  const [packages, setPackages] = useState<{ value: string; label: string }[]>(
-    []
-  );
-  const [admins, setAdmins] = useState<{ value: string; label: string }[]>([]);
-  const [resellers, setResellers] = useState<
-    { value: string; label: string }[]
-  >([]);
-  const [endCustomers, setEndCustomers] = useState<
-    { value: string; label: string }[]
-  >([]);
-  const [projectTypes, setProjectTypes] = useState<
-    { value: string; label: string }[]
-  >([]);
-  const [collectors, setCollectors] = useState<
-    { value: string; label: string }[]
-  >([]); // Add collectors state
-  const [analyzers, setAnalyzers] = useState<
-    { value: string; label: string }[]
-  >([]); // Add analyzers state
-  const [availablePorts, setAvailablePorts] = useState<
-    { value: string; label: string }[]
-  >([]);
-  const [loading, setLoading] = useState(true);
+  const [project_type_id, setProjectTypeId] = useState("");
+  const [collector_id, setCollectorId] = useState("");
+  const [analyzer_id, setAnalyzerId] = useState("");
+  const [port_id, setPortId] = useState("");
+  const [admin_id, setAdminId] = useState("");
+  const [reseller_id, setResellerId] = useState("");
+  const [end_customer_id, setEndCustomerId] = useState("");
+  const [device_count, setDeviceCount] = useState("5");
+  const [devices, setDevices] = useState<any[]>([]);
+  const [localDevices, setLocalDevices] = useState<any[]>([]); // New state for creating devices
+  const [newDeviceLoading, setNewDeviceLoading] = useState(false);
+  
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
 
-  // Reset form when dialog opens or project changes
+  // ... existing options state ...
+  const [options, setOptions] = useState<any>({
+    types: [], admins: [], resellers: [], customers: [], collectors: [], analyzers: [], ports: []
+  });
+
+  const generateHexKey = () => {
+    const chars = '0123456789ABCDEF';
+    let key = '';
+    for (let i = 0; i < 32; i++) {
+      key += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return key;
+  };
+
+  // Effect to update localDevices when device_count changes (only for new projects)
+  useEffect(() => {
+    if (!project?.id && open) {
+      const count = parseInt(device_count) || 0;
+      setLocalDevices(prev => {
+        if (prev.length === count) return prev;
+
+        const newDevices = [...prev];
+        if (count > prev.length) {
+          // Add rows
+          for (let i = prev.length; i < count; i++) {
+            const today = new Date();
+            const nextMonth = new Date();
+            nextMonth.setMonth(today.getMonth() + 1);
+            newDevices.push({
+              device_key: generateHexKey(),
+              log_duration: 30,
+              package_start_at: today.toISOString().split('T')[0],
+              package_end_at: nextMonth.toISOString().split('T')[0]
+            });
+          }
+        } else {
+          // Remove rows from the end
+          newDevices.splice(count);
+        }
+        return newDevices;
+      });
+    }
+  }, [device_count, open, project]);
+
+  const updateLocalDevice = (index: number, field: string, value: any) => {
+    setLocalDevices(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  // ... existing useEffect ... (keep it, but modify initialization)
   useEffect(() => {
     if (open) {
+      // ... existing fetch ...
       const fetchData = async () => {
-        setLoading(true);
-        try {
-          // Fetch packages
-          const packagesResult = await getPackages();
-          if (packagesResult.success && packagesResult.packages) {
-            const packageOptions = packagesResult.packages.map((pkg: PackageOption) => ({
-              value: pkg.id,
-              label: pkg.name,
-            }));
-            setPackages(packageOptions);
-          }
+        const [types, admins, resellers, customers, collectors, analyzers, ports] = await Promise.all([
+          getProjectTypes(), getAdmins(), getResellers(), getEndCustomers(), getCollectors(), getAnalyzers(), getPorts()
+        ]);
+        setOptions({
+          types: sortOptions((types.projectTypes || []).map((t: any) => ({ value: t.id, label: t.type }))),
+          admins: sortOptions((admins.admins || []).map((a: any) => ({ value: a.id, label: a.username }))),
+          // Show only active entities in the form dropdowns
+          resellers: sortOptions((resellers.resellers || [])
+            .filter((r: any) => r.status === true)
+            .map((r: any) => ({ value: r.id, label: r.company }))),
+          customers: sortOptions((customers.customers || [])
+            .filter((c: any) => c.status === true)
+            .map((c: any) => ({
+              value: c.id,
+              label: c.company || c.contact_person
+            }))),
+          collectors: sortOptions((collectors.collectors || [])
+            .filter((c: any) => c.is_active === true)
+            .map((c: any) => ({ value: c.id, label: c.name }))),
+          analyzers: sortOptions((analyzers.analyzers || [])
+            .filter((a: any) => a.status === true)
+            .map((a: any) => ({ value: a.id, label: a.name }))),
+          ports: (ports.ports || [])
+            .sort((a: any, b: any) => a.port - b.port)
+            .map((p: any) => ({
+              value: p.id,
+              label: `Port ${p.port}`
+            })),
+        });
 
-          // Fetch admins
-          const adminsResult = await getAdmins();
-          if (adminsResult.success && adminsResult.admins) {
-            const adminOptions = adminsResult.admins.map((admin: AdminOption) => ({
-              value: admin.id,
-              label: admin.name || admin.email,
-            }));
-            setAdmins(adminOptions);
-          }
-
-          // Fetch resellers
-          const resellersResult = await getResellers();
-          if (resellersResult.success && resellersResult.resellers) {
-            const resellerOptions = resellersResult.resellers.map(
-              (reseller: ResellerOption) => ({
-                value: reseller.customer_id,
-                label: reseller.company_name,
-              })
-            );
-            setResellers(resellerOptions);
-          }
-
-          // Fetch end customers
-          const endCustomersResult = await getEndCustomers();
-          if (endCustomersResult.success && endCustomersResult.endCustomers) {
-            const endCustomerOptions = endCustomersResult.endCustomers.map(
-              (endCustomer: EndCustomerOption) => ({
-                value: endCustomer.id,
-                label: endCustomer.company || "N/A",
-              })
-            );
-            setEndCustomers(endCustomerOptions);
-          }
-
-          // Fetch project types
-          const projectTypesResult = await getProjectTypes();
-          if (projectTypesResult.success && projectTypesResult.projectTypes) {
-            const projectTypeOptions = projectTypesResult.projectTypes.map(
-              (type: ProjectTypeOption) => ({
-                value: type.id,
-                label: type.name || "N/A",
-              })
-            );
-            setProjectTypes(projectTypeOptions);
-          }
-
-          // Fetch collectors
-          const collectorsResult = await getCollectors();
-          if (collectorsResult.success && collectorsResult.collectors) {
-            const collectorOptions = collectorsResult.collectors.map(
-              (collector: CollectorOption) => ({
-                value: collector.id,
-                label: collector.name || collector.ip || "N/A",
-              })
-            );
-            setCollectors(collectorOptions);
-          }
-
-          // Fetch analyzers
-          const analyzersResult = await getAnalyzers();
-          if (analyzersResult.success && analyzersResult.analyzers) {
-            const analyzerOptions = analyzersResult.analyzers.map(
-              (analyzer: CollectorOption & { ip?: string | null }) => ({
-                value: analyzer.id,
-                label: analyzer.name || analyzer.ip || "N/A",
-              })
-            );
-            setAnalyzers(analyzerOptions);
-          }
-
-          if (project) {
-            setCollectorIp(project.collector_ip || null); // Set collector ID
-            setAnalyzerId(project.logger_ip || null);
-            setPkgId(project.pkg_id || "");
-            setAdminId(project.admin_id || null);
-            setResellerId(project.reseller_id || null);
-            setPortId(project.port_id || null);
-            setEndCustomerId(project.end_customer_id || null);
-            setType(project.type || "");
-            setStatus(project.status !== undefined ? project.status : true);
-            setIsActiveCollBool(project.is_active_coll === 1);
-            setIsActiveAnBool(project.is_active_an === 1);
-            setActivationKey(project.activation_key || "");
-
-            // Fetch available ports for the project's collector IP
-            if (project.collector_ip) {
-              await fetchAvailablePortsForCollector(
-                project.collector_ip,
-                project.port_id || null
-              );
-            }
-          } else {
-            setCollectorIp(null); // Reset collector ID
-            setAnalyzerId(null);
-            setPkgId("");
-            setAdminId(null);
-            setResellerId(null);
-            setPortId(null);
-            setEndCustomerId(null);
-            setType("");
-            setStatus(true); // Default to enabled for new projects
-            setIsActiveCollBool(true);
-            setIsActiveAnBool(true);
-            // Generate a new activation key for new projects
-            const newActivationKey = generateActivationKey();
-            setActivationKey(newActivationKey);
-          }
-        } catch (error) {
-          console.error("Error fetching data:", error);
-        } finally {
-          setLoading(false);
+        if (project) {
+          if (project.id) fetchDevices(project.id);
+          // set project data
+          setActivationKey(project.activation_key);
+          setProjectTypeId(project.project_type_id?.toString() || "");
+          setCollectorId(project.collector_id?.toString() || "");
+          setAnalyzerId(project.analyzer_id?.toString() || "");
+          setPortId(project.port_id?.toString() || "");
+          setAdminId(project.admin_id?.toString() || "");
+          setResellerId(project.reseller_id?.toString() || "");
+          setEndCustomerId(project.end_customer_id?.toString() || "");
+          setDeviceCount(project.device_count?.toString() || "5");
+          setLocalDevices([]); // Reset local devices for edit mode
+        } else {
+          setActivationKey(generateActivationKey());
+          setProjectTypeId(""); setCollectorId(""); setAnalyzerId(""); setPortId(""); setAdminId(""); setResellerId(""); setEndCustomerId(""); setDeviceCount("5");
+          setDevices([]);
+          // Initial population for localDevices handled by the other useEffect
         }
       };
-
       fetchData();
     }
   }, [open, project]);
 
-  // Fetch available ports when collector IP changes
+  // Autofill the first available port when a collector is selected (only for new projects)
   useEffect(() => {
-    const fetchPorts = async () => {
-      // Only fetch ports if we're not editing a project (in which case ports are fetched in fetchData)
-      if (open && collector_ip && !project) {
-        console.log("Fetching ports for collector:", collector_ip);
-        await fetchAvailablePortsForCollector(collector_ip, null);
-      } else if (open && !collector_ip) {
-        console.log("Clearing available ports");
-        setAvailablePorts([]);
-      } else {
-        console.log("Not fetching ports - open:", open, "collector_ip:", collector_ip, "project:", project);
+    // Only autofill if: it's a new project (!project), a collector is selected, ports are loaded, and port is currently empty
+    if (open && !project && collector_id && options.ports.length > 0 && !port_id) {
+      const usedPortIds = (allProjects || [])
+        .filter(p => p.collector_id === collector_id.toString())
+        .map(p => p.port_id?.toString());
+
+      // Find the first port ID from the list that is not in the used list for this collector
+      const availablePort = options.ports.find((p: any) => !usedPortIds.includes(p.value));
+
+      if (availablePort) {
+        setPortId(availablePort.value);
       }
-    };
+    }
+  }, [collector_id, options.ports, allProjects, project, open, port_id]);
 
-    fetchPorts();
-  }, [open, collector_ip, project]);
+  // ... existing fetchDevices ...
+  const fetchDevices = async (projectId: string) => {
+    const result = await getDevicesByProjectId(projectId);
+    if (result.success) setDevices(result.devices || []);
+  };
 
-  // Helper function to fetch available ports
-  const fetchAvailablePortsForCollector = async (
-    collectorId: string,
-    projectId: string | null
-  ) => {
+  // ... existing handlers ... (keep add/delete for Edit mode if desired)
+  const handleAddDevice = async () => {
+    if (!project?.id) return; // Only for edit mode
+
+    const limit = parseInt(device_count) || 0;
+    const currentCount = devices.length;
+    const keysToGenerate = limit - currentCount;
+
+    if (keysToGenerate <= 0) {
+      alert(`Cannot generate more keys. The limit of ${limit} devices has been reached.`);
+      return;
+    }
+
+    setNewDeviceLoading(true);
     try {
-      console.log(
-        "Fetching available ports for collector:",
-        collectorId,
-        "project ID:",
-        projectId
-      );
+      const today = new Date();
+      const nextMonth = new Date();
+      nextMonth.setMonth(today.getMonth() + 1);
 
-      // Validate collectorId
-      if (!collectorId) {
-        console.log("No collector ID provided, clearing available ports");
-        setAvailablePorts([]);
-        return;
+      // Generate all needed keys sequentially
+      for (let i = 0; i < keysToGenerate; i++) {
+        await createDevice({
+          project_id: project.id,
+          log_duration: 30,
+          package_start_at: today.toISOString().split('T')[0],
+          package_end_at: nextMonth.toISOString().split('T')[0]
+        });
       }
 
-      const portsResult = await getAvailablePorts(collectorId);
-      console.log("Ports result:", portsResult);
-      let portOptions: { value: string; label: string }[] = [];
-
-      if (portsResult.success && portsResult.ports) {
-        portOptions = portsResult.ports.map((port: PortOption) => ({
-          value: port.id,
-          label: `Port ${port.port}`,
-        }));
-        console.log("Mapped port options:", portOptions);
-      }
-
-      // If we're editing a project and it has a port assigned that's not in the available list,
-      // add it to the list so it can be selected
-      if (projectId) {
-        const isPortInList = portOptions.some(
-          (option) => option.value === projectId
-        );
-        console.log(
-          "Port ID in list:",
-          isPortInList,
-          "Port options:",
-          portOptions
-        );
-        if (!isPortInList) {
-          // Get the port details to add it to the list
-          const portResult = await getPortById(projectId);
-          console.log("Port result:", portResult);
-          if (portResult.success && portResult.port) {
-            const assignedPortOption = {
-              value: portResult.port.id,
-              label: `Port ${portResult.port.port} (currently assigned)`,
-            };
-            portOptions = [assignedPortOption, ...portOptions];
-          }
-        }
-      }
-
-      console.log("Setting available ports:", portOptions);
-      setAvailablePorts(portOptions);
-
-      // Show a message if this is a non-default collector with restrictions
-      if (portsResult.success && portsResult.isDefaultCollector === false) {
-        console.log("This is a non-default collector with port restrictions");
-      }
+      await fetchDevices(project.id);
     } catch (error) {
-      console.error("Error fetching available ports:", error);
-      setAvailablePorts([]);
+      console.error("Failed to add device", error);
+    } finally {
+      setNewDeviceLoading(false);
     }
   };
 
-  console.log("loading", loading);
+  const handleDeleteDevice = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this device key?")) return;
+    await deleteDevice(id);
+    if (project?.id) fetchDevices(project.id);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    onSave({
+      projectData: {
+        activation_key,
+        project_type_id,
+        collector_id,
+        analyzer_id: analyzer_id || null,
+        port_id: port_id || null,
+        admin_id,
+        reseller_id: reseller_id || null,
+        end_customer_id: end_customer_id || null,
+        device_count: parseInt(device_count) || 5
+      },
+      localDevices: !project?.id ? localDevices : [] // Only pass localDevices for new projects
+    });
+  };
 
-    const projectData: Project = {
-      collector_ip, // This is now the collector ID
-      logger_ip: analyzer_id || null,
-      pkg_id,
-      admin_id,
-      reseller_id,
-      port_id,
-      end_customer_id,
-      type,
-      status,
-      is_active_coll: is_active_coll_bool ? 1 : 0,
-      is_active_an: is_active_an_bool ? 1 : 0,
-      activation_key: activation_key || undefined,
-      // secret_key is intentionally not included as it's only managed on the backend
+  // copy to clipboard
+  const handleCopy = (text: string) => {
+    const fallbackCopy = () => {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
     };
 
-    if (project?.id) {
-      projectData.id = project.id;
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => setCopySuccess("Copied to clipboard!"))
+          .catch(() => {
+            fallbackCopy();
+            setCopySuccess("Copied to clipboard!");
+          });
+      } else {
+        fallbackCopy();
+        setCopySuccess("Copied to clipboard!");
+      }
+    } catch (err) {
+      console.error("Copy failed", err);
     }
 
-    onSave(projectData);
+    // hide message after 2 seconds
+    setTimeout(() => setCopySuccess(null), 2000);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[800px]">
+      {/* Added overflow-x-hidden to remove the horizontal scroll bar */}
+      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <form onSubmit={handleSubmit}>
+          {/* ... existing header ... */}
+          {/* ... existing form fields ... */}
           <DialogHeader>
-            <DialogTitle>
-              {project ? "Edit Project" : "Add Project"}
-            </DialogTitle>
-            <DialogDescription>
-              {project
-                ? "Make changes to the project here."
-                : "Add a new project here."}
-            </DialogDescription>
+            <DialogTitle>{project ? "Edit Project" : "Add Project"}</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {/* Combined row for Act Key and Project Type */}
-            <div className="grid grid-cols-8 items-center gap-4">
-              <Label htmlFor="activation_key" className="text-right col-span-1">
-                Act Key
-              </Label>
-              <div className="col-span-3 flex gap-2">
-                <Input
-                  id="activation_key"
-                  value={activation_key}
-                  onChange={(e) => setActivationKey(e.target.value)}
-                  className="flex-1"
-                />
-                {!project && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setActivationKey(generateActivationKey())}
-                    size="sm"
-                  >
-                    Gen
-                  </Button>
-                )}
-              </div>
-              <Label htmlFor="type" className="text-right col-span-1">
-                Project Type
-              </Label>
-              <div className="col-span-3">
-                <ComboBox
-                  options={projectTypes}
-                  value={type}
-                  onValueChange={setType}
-                  placeholder="Select type..."
-                  searchPlaceholder="Search types..."
-                  emptyMessage="No types found."
-                />
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Activation Key</Label>
+              <div className="flex gap-2">
+                {/* Activation key should be read only */}
+                <Input value={activation_key} readOnly required />
+                {/* <Input value={activation_key} onChange={(e) => setActivationKey(e.target.value)} required /> */}
+                {!project && <Button type="button" variant="outline" onClick={() => setActivationKey(generateActivationKey())}>Gen</Button>}
               </div>
             </div>
-
-            {/* Combined row for Collector and Logger IP */}
-            <div className="grid grid-cols-8 items-center gap-4">
-              <Label htmlFor="collector" className="text-right col-span-1">
-                Collector
-              </Label>
-              <div className="col-span-3">
-                <ComboBox
-                  options={collectors}
-                  value={collector_ip || ""}
-                  onValueChange={(value: string) =>
-                    setCollectorIp(value || null)
-                  }
-                  placeholder="Select collector..."
-                  searchPlaceholder="Search collectors..."
-                  emptyMessage="No collectors found."
-                />
-              </div>
-              <Label htmlFor="analyzer" className="text-right col-span-1">
-                Analyzer
-              </Label>
-              <div className="col-span-3">
-                <ComboBox
-                  options={analyzers}
-                  value={analyzer_id || ""}
-                  onValueChange={(value: string) => setAnalyzerId(value || null)}
-                  placeholder="Select analyzer..."
-                  searchPlaceholder="Search analyzers..."
-                  emptyMessage="No analyzers found."
-                  disabled={!project}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Project Type</Label>
+              <ComboBox options={options.types} value={project_type_id} onValueChange={setProjectTypeId} placeholder="Select type" />
             </div>
-
-            {/* Combined row for Package and Admin */}
-            <div className="grid grid-cols-8 items-center gap-4">
-              <Label htmlFor="pkg_id" className="text-right col-span-1">
-                Package
-              </Label>
-              <div className="col-span-3">
-                <ComboBox
-                  options={packages}
-                  value={pkg_id}
-                  onValueChange={setPkgId}
-                  placeholder="Select package..."
-                  searchPlaceholder="Search packages..."
-                  emptyMessage="No packages found."
-                />
-              </div>
-              <Label htmlFor="admin_id" className="text-right col-span-1">
-                Admin
-              </Label>
-              <div className="col-span-3">
-                <ComboBox
-                  options={admins}
-                  value={admin_id || ""}
-                  onValueChange={(value: string) => setAdminId(value || null)}
-                  placeholder="Select admin..."
-                  searchPlaceholder="Search admins..."
-                  emptyMessage="No admins found."
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Collector</Label>
+              <ComboBox options={options.collectors} value={collector_id} onValueChange={setCollectorId} placeholder="Select collector" />
             </div>
-
-            {/* Combined row for Reseller and Port */}
-            <div className="grid grid-cols-8 items-center gap-4">
-              <Label htmlFor="reseller_id" className="text-right col-span-1">
-                Reseller
-              </Label>
-              <div className="col-span-3">
-                <ComboBox
-                  options={resellers}
-                  value={reseller_id || ""}
-                  onValueChange={(value: string) =>
-                    setResellerId(value || null)
-                  }
-                  placeholder="Select reseller..."
-                  searchPlaceholder="Search resellers..."
-                  emptyMessage="No resellers found."
-                />
+            {/* Analyzer selection grid is only needed for edit project form */}
+            {project && (
+              <div className="space-y-2">
+                <Label>Analyzer</Label>
+                <ComboBox options={options.analyzers} value={analyzer_id} onValueChange={setAnalyzerId} placeholder="Select analyzer" />
               </div>
-              <Label htmlFor="port_id" className="text-right col-span-1">
-                Port
-              </Label>
-              <div className="col-span-3">
-                <ComboBox
-                  options={availablePorts}
-                  value={port_id || ""}
-                  onValueChange={(value: string) => setPortId(value || null)}
-                  placeholder="Select port..."
-                  searchPlaceholder="Search ports..."
-                  emptyMessage="No ports found."
-                />
-              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Port</Label>
+              {/* Autofill and filter ports based on selected collector to prevent duplicates */}
+              <ComboBox
+                options={options.ports.filter((p: any) => {
+                  // In add mode, hide ports already taken by this collector
+                  // In edit mode, allow the current project's port plus any untaken ones
+                  const isCurrentPort = project?.port_id?.toString() === p.value;
+                  const isTaken = (allProjects || []).some(ap =>
+                    ap.collector_id === collector_id &&
+                    ap.port_id === p.value &&
+                    ap.id !== project?.id
+                  );
+                  return isCurrentPort || !isTaken;
+                })}
+                value={port_id}
+                onValueChange={setPortId}
+                placeholder="Select port"
+              />
             </div>
-
-            {/* Combined row for End Customer and Status */}
-            <div className="grid grid-cols-8 items-center gap-4">
-              <Label htmlFor="end_customer_id" className="text-right col-span-1">
-                End Cust..
-              </Label>
-              <div className="col-span-3">
-                <ComboBox
-                  options={endCustomers}
-                  value={end_customer_id || ""}
-                  onValueChange={(value: string) =>
-                    setEndCustomerId(value || null)
-                  }
-                  placeholder="Select customer..."
-                  searchPlaceholder="Search customers..."
-                  emptyMessage="No customers found."
-                />
-              </div>
-              <Label htmlFor="status" className="text-right col-span-1">
-                Status
-              </Label>
-              <div className="col-span-2 flex items-center gap-3">
-                <Switch
-                  id="status"
-                  checked={status}
-                  onCheckedChange={setStatus}
-                />
-                <span className="text-sm">{status ? "Enabled" : "Disabled"}</span>
-              </div>
+            <div className="space-y-2">
+              <Label>Admin</Label>
+              <ComboBox options={options.admins} value={admin_id} onValueChange={setAdminId} placeholder="Select admin" />
             </div>
-
-            {/* Row for Active Statuses */}
-            <div className="grid grid-cols-8 items-center gap-4">
-              <Label htmlFor="is_active_coll" className="text-right col-span-1">
-                Coll Active
-              </Label>
-              <div className="col-span-3 flex items-center gap-3">
-                <Switch
-                  id="is_active_coll"
-                  checked={is_active_coll_bool}
-                  onCheckedChange={setIsActiveCollBool}
-                />
-                <span className="text-sm">{is_active_coll_bool ? "Active" : "Inactive"}</span>
-              </div>
-              <Label htmlFor="is_active_an" className="text-right col-span-1">
-                Anly Active
-              </Label>
-              <div className="col-span-3 flex items-center gap-3">
-                <Switch
-                  id="is_active_an"
-                  checked={is_active_an_bool}
-                  onCheckedChange={setIsActiveAnBool}
-                />
-                <span className="text-sm">{is_active_an_bool ? "Active" : "Inactive"}</span>
-              </div>
+            <div className="space-y-2">
+              <Label>Reseller</Label>
+              <ComboBox options={options.resellers} value={reseller_id} onValueChange={setResellerId} placeholder="Select reseller" />
+            </div>
+            <div className="space-y-2">
+              <Label>End Customer</Label>
+              <ComboBox options={options.customers} value={end_customer_id} onValueChange={setEndCustomerId} placeholder="Select customer" />
+            </div>
+            <div className="space-y-2">
+              <Label>Device Count</Label>
+              <Input type="number" value={device_count} onChange={(e) => setDeviceCount(e.target.value)} required />
             </div>
           </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit">
-              {project ? "Save Changes" : "Add Project"}
-            </Button>
+
+          <div className="mt-8 border-t pt-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium">Device Keys</h3>
+              {project?.id && (
+                <Button type="button" size="sm" onClick={handleAddDevice} disabled={newDeviceLoading || devices.length >= (parseInt(device_count) || 0)}>
+                  {(() => {
+                    const remaining = (parseInt(device_count) || 0) - devices.length;
+                    if (newDeviceLoading) return "Generating...";
+                    if (remaining <= 0) return "Limit Reached";
+                    return `Generate ${remaining} Key${remaining > 1 ? 's' : ''}`;
+                  })()}
+                </Button>
+              )}
+            </div>
+
+            <div className="border rounded-md">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-muted text-muted-foreground">
+                  <tr>
+                    <th className="p-2">Device Key</th>
+                    <th className="p-2 w-24">Duration</th>
+                    <th className="p-2 w-40">Starts</th>
+                    <th className="p-2 w-40">Ends</th>
+                    {/* Render Actions column only in Edit mode */}
+                    {project?.id && <th className="p-2 text-right w-20">Actions</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Render existing devices for Edit mode */}
+                  {project?.id && devices.map((device) => (
+                    <tr key={device.id} className="border-t">
+                      <td className="p-2 font-mono flex items-center gap-2 relative">
+                        {device.device_key}
+                      <Button type="button" variant="ghost" size="icon" className="h-4 w-4"
+                        onClick={() => handleCopy(device.device_key)}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+
+                        {/* Success message */}
+                        {copySuccess && (
+                          <div className="fixed bottom-4 right-4 bg-green-500 text-white px-3 py-2 rounded shadow">
+                            {copySuccess}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-2">{device.log_duration}</td>
+                      <td className="p-2">{format(new Date(device.package_start_at), "yyyy-MM-dd")}</td>
+                      <td className="p-2">{format(new Date(device.package_end_at), "yyyy-MM-dd")}</td>
+                      <td className="p-2 text-right">
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteDevice(device.id)}>
+                          <Trash className="h-3 w-3" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {/* Render local devices for Create mode */}
+                  {!project?.id && localDevices.map((device, index) => (
+                    <tr key={index} className="border-t">
+                      <td className="p-2">
+                        <div className="flex gap-1">
+                          <Input
+                            value={device.device_key}
+                            onChange={(e) => updateLocalDevice(index, 'device_key', e.target.value)}
+                            className="h-8 font-mono text-xs"
+                          />
+                          <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={() => updateLocalDevice(index, 'device_key', generateHexKey())}>
+                            <RefreshCw className="h-3 w-3 rotate-90" />
+                          </Button>
+                        </div>
+                      </td>
+                      <td className="p-2">
+                        <Input
+                          type="number"
+                          value={device.log_duration}
+                          onChange={(e) => updateLocalDevice(index, 'log_duration', parseInt(e.target.value))}
+                          className="h-8"
+                        />
+                      </td>
+                      <td className="p-2">
+                        <Input
+                          type="date"
+                          value={device.package_start_at}
+                          onChange={(e) => updateLocalDevice(index, 'package_start_at', e.target.value)}
+                          className="h-8"
+                        />
+                      </td>
+                      <td className="p-2">
+                        <Input
+                          type="date"
+                          value={device.package_end_at}
+                          onChange={(e) => updateLocalDevice(index, 'package_end_at', e.target.value)}
+                          className="h-8"
+                        />
+                      </td>
+                      {/* Removed empty Actions <td> for Add mode */}
+                    </tr>
+                  ))}
+
+                  {/* Empty states */}
+                  {project?.id && devices.length === 0 && (
+                    <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No device keys generated</td></tr>
+                  )}
+                  {!project?.id && localDevices.length === 0 && (
+                    <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">Set device count to generate keys</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-6">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit">{project ? "Save Changes" : "Add Project"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

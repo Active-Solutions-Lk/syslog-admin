@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ComboBox } from "@/components/dashboard/combo_box"
+import { Switch } from "@/components/ui/switch"
 
 interface EndCustomer {
   id?: string
@@ -21,7 +21,7 @@ interface EndCustomer {
   contact_person: string
   tel: string
   email?: string | null
-  status: string
+  status: boolean
 }
 
 interface EndCustomerDialogProps {
@@ -31,18 +31,13 @@ interface EndCustomerDialogProps {
   onSave: (endCustomer: EndCustomer) => void
 }
 
-const statusOptions = [
-  { value: "active", label: "Active" },
-  { value: "inactive", label: "Inactive" },
-]
-
 export function EndCustomerDialog({ open, onOpenChange, endCustomer, onSave }: EndCustomerDialogProps) {
   const [company, setCompany] = React.useState(endCustomer?.company || "")
   const [address, setAddress] = React.useState(endCustomer?.address || "")
   const [contact_person, setContactPerson] = React.useState(endCustomer?.contact_person || "")
   const [tel, setTel] = React.useState(endCustomer?.tel || "")
   const [email, setEmail] = React.useState(endCustomer?.email || "")
-  const [status, setStatus] = React.useState(endCustomer?.status || "active")
+  const [status, setStatus] = React.useState(endCustomer?.status ?? true)
 
   React.useEffect(() => {
     if (endCustomer) {
@@ -58,12 +53,26 @@ export function EndCustomerDialog({ open, onOpenChange, endCustomer, onSave }: E
       setContactPerson("")
       setTel("")
       setEmail("")
-      setStatus("active")
+      setStatus(true)
     }
   }, [endCustomer, open])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Client-side validation for email and phone number
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+      alert("Invalid email address format");
+      return;
+    }
+
+    const telRegex = /^[0-9\-\+ ]{7,15}$/;
+    if (tel && !telRegex.test(tel)) {
+      alert("Invalid phone number format. Use 7-15 digits, spaces, -, or +.");
+      return;
+    }
+
     onSave({
       ...(endCustomer?.id && { id: endCustomer.id }),
       company: company || null,
@@ -82,98 +91,40 @@ export function EndCustomerDialog({ open, onOpenChange, endCustomer, onSave }: E
           <DialogHeader>
             <DialogTitle>{endCustomer ? "Edit End Customer" : "Add End Customer"}</DialogTitle>
             <DialogDescription>
-              {endCustomer 
-                ? "Make changes to the end customer account here." 
-                : "Add a new end customer account here."}
+              Update end customer information.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="company" className="text-right">
-                Company
-              </Label>
-              <div className="col-span-3">
-                <Input
-                  id="company"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  className="w-full"
-                />
-              </div>
+              <Label htmlFor="company" className="text-right">Company</Label>
+              <Input id="company" value={company} onChange={(e) => setCompany(e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="address" className="text-right">
-                Address
-              </Label>
-              <div className="col-span-3">
-                <Input
-                  id="address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full"
-                />
-              </div>
+              <Label htmlFor="address" className="text-right">Address</Label>
+              <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="contact_person" className="text-right">
-                Contact Person
-              </Label>
-              <div className="col-span-3">
-                <Input
-                  id="contact_person"
-                  value={contact_person}
-                  onChange={(e) => setContactPerson(e.target.value)}
-                  className="w-full"
-                  required
-                />
-              </div>
+              <Label htmlFor="contact_person" className="text-right">Contact</Label>
+              <Input id="contact_person" value={contact_person} onChange={(e) => setContactPerson(e.target.value)} className="col-span-3" required />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="tel" className="text-right">
-                Telephone
-              </Label>
-              <div className="col-span-3">
-                <Input
-                  id="tel"
-                  value={tel}
-                  onChange={(e) => setTel(e.target.value)}
-                  className="w-full"
-                  required
-                />
-              </div>
+              <Label htmlFor="tel" className="text-right">Tel</Label>
+              <Input id="tel" value={tel} onChange={(e) => setTel(e.target.value)} className="col-span-3" required />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                Email
-              </Label>
-              <div className="col-span-3">
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full"
-                />
-              </div>
+              <Label htmlFor="email" className="text-right">Email</Label>
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="status" className="text-right">
-                Status
-              </Label>
-              <div className="col-span-3">
-                <ComboBox
-                  options={statusOptions}
-                  value={status}
-                  onValueChange={setStatus}
-                  placeholder="Select a status..."
-                />
+              <Label htmlFor="status" className="text-right">Status</Label>
+              <div className="col-span-3 flex items-center gap-2">
+                <Switch checked={status} onCheckedChange={setStatus} />
+                <span>{status ? "Active" : "Inactive"}</span>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit">{endCustomer ? "Save Changes" : "Add End Customer"}</Button>
           </DialogFooter>
         </form>

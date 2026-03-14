@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -17,13 +16,10 @@ import { useState, useEffect } from "react";
 interface Collector {
   id?: string;
   name: string;
-  ip: string;
-  domain: string;
+  ip: string | null;
+  domain: string | null;
   secret_key: string;
-  last_fetched_id: number;
   is_active: boolean;
-  created_at?: Date;
-  updated_at?: Date;
 }
 
 interface CollectorDialogProps {
@@ -34,13 +30,12 @@ interface CollectorDialogProps {
 }
 
 export function CollectorDialog({ open, onOpenChange, collector, onSave }: CollectorDialogProps) {
-  const [name, setName] = useState<string>("");
-  const [ip, setIp] = useState<string>("");
-  const [domain, setDomain] = useState<string>("");
-  const [secretKey, setSecretKey] = useState<string>("");
-  const [isActive, setIsActive] = useState<boolean>(true);
+  const [name, setName] = useState("");
+  const [ip, setIp] = useState("");
+  const [domain, setDomain] = useState("");
+  const [secretKey, setSecretKey] = useState("");
+  const [is_active, setIsActive] = useState(true);
 
-  // Reset form when dialog opens or collector changes
   useEffect(() => {
     if (open) {
       if (collector) {
@@ -50,47 +45,34 @@ export function CollectorDialog({ open, onOpenChange, collector, onSave }: Colle
         setSecretKey(collector.secret_key || "");
         setIsActive(collector.is_active ?? true);
       } else {
-        setName("");
-        setIp("");
-        setDomain("");
-        setSecretKey("");
-        setIsActive(true);
+        setName(""); setIp(""); setDomain(""); setSecretKey(""); setIsActive(true);
       }
     }
   }, [open, collector]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!name.trim()) {
-      alert("Please enter a name");
+
+    // Client-side validation for IP address and Secret Key
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (ip && !ipRegex.test(ip)) {
+      alert("Invalid IP address format. Use format x.x.x.x");
       return;
     }
-    
-    if (!ip.trim()) {
-      alert("Please enter an IP address");
+
+    if (!secretKey || secretKey.length < 8) {
+      alert("Secret Key is required and must be at least 8 characters long.");
       return;
     }
-    
-    if (!secretKey.trim()) {
-      alert("Please enter a secret key");
-      return;
-    }
-    
-    const collectorData: Collector = {
-      name: name.trim(),
-      ip: ip.trim(),
-      domain: domain.trim(),
-      secret_key: secretKey.trim(),
-      last_fetched_id: 0, // Initialize with default value
-      is_active: isActive,
-    };
-    
-    if (collector?.id) {
-      collectorData.id = collector.id;
-    }
-    
-    onSave(collectorData);
+
+    onSave({
+      ...(collector?.id && { id: collector.id }),
+      name,
+      ip: ip || null,
+      domain: domain || null,
+      secret_key: secretKey,
+      is_active
+    });
   };
 
   return (
@@ -99,82 +81,34 @@ export function CollectorDialog({ open, onOpenChange, collector, onSave }: Colle
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{collector ? "Edit Collector" : "Add Collector"}</DialogTitle>
-            <DialogDescription>
-              {collector 
-                ? "Make changes to the collector here." 
-                : "Add a new collector here."}
-            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="col-span-3"
-                required
-              />
+              <Label className="text-right">Name</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" required />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="ip" className="text-right">
-                IP Address
-              </Label>
-              <Input
-                id="ip"
-                value={ip}
-                onChange={(e) => setIp(e.target.value)}
-                className="col-span-3"
-                placeholder="192.168.1.100"
-                required
-              />
+              <Label className="text-right">IP</Label>
+              <Input value={ip} onChange={(e) => setIp(e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="domain" className="text-right">
-                Domain
-              </Label>
-              <Input
-                id="domain"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                className="col-span-3"
-                placeholder="example.com"
-              />
+              <Label className="text-right">Domain</Label>
+              <Input value={domain} onChange={(e) => setDomain(e.target.value)} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="secretKey" className="text-right">
-                Secret Key
-              </Label>
-              <Input
-                id="secretKey"
-                value={secretKey}
-                onChange={(e) => setSecretKey(e.target.value)}
-                className="col-span-3"
-                required
-              />
+              <Label className="text-right">Secret Key</Label>
+              <Input value={secretKey} onChange={(e) => setSecretKey(e.target.value)} className="col-span-3" required />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="isActive" className="text-right">
-                Active
-              </Label>
-              <div className="col-span-3 flex items-center">
-                <Switch
-                  id="isActive"
-                  checked={isActive}
-                  onCheckedChange={setIsActive}
-                />
+              <Label className="text-right">Active</Label>
+              <div className="col-span-3">
+                <Switch checked={is_active} onCheckedChange={setIsActive} />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">
-              {collector ? "Save Changes" : "Add Collector"}
-            </Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit">{collector ? "Save Changes" : "Add Collector"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
