@@ -138,24 +138,29 @@ export function DeviceDialog({ open, onOpenChange, device, onSave }: DeviceDialo
                                             <CommandList>
                                                 <CommandEmpty>No project found.</CommandEmpty>
                                                 <CommandGroup>
-                                                    {projects.map((p) => (
-                                                        <CommandItem
-                                                            key={p.id}
-                                                            value={`${p.end_customer?.company || `Project ${p.id}`} ${p.activation_key}`}
-                                                            onSelect={() => {
-                                                                setProjectId(p.id === projectId ? "" : p.id);
-                                                                setDropdownOpen(false);
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    projectId === p.id ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {p.end_customer?.company || `Project ${p.id}`} ({p.activation_key})
-                                                        </CommandItem>
-                                                    ))}
+                                                {projects
+                                                .sort((a, b) =>
+                                                    (a.end_customer?.company || `Project ${a.id}`)
+                                                    .localeCompare(b.end_customer?.company || `Project ${b.id}`)
+                                                )
+                                                .map((p) => (
+                                                    <CommandItem
+                                                    key={p.id}
+                                                    value={`${p.end_customer?.company || `Project ${p.id}`} ${p.activation_key}`}
+                                                    onSelect={() => {
+                                                        setProjectId(p.id === projectId ? "" : p.id);
+                                                        setDropdownOpen(false);
+                                                    }}
+                                                    >
+                                                    <Check
+                                                        className={cn(
+                                                        "mr-2 h-4 w-4",
+                                                        projectId === p.id ? "opacity-100" : "opacity-0"
+                                                        )}
+                                                    />
+                                                    {p.end_customer?.company || `Project ${p.id}`} ({p.activation_key})
+                                                    </CommandItem>
+                                                ))}
                                                 </CommandGroup>
                                             </CommandList>
                                         </Command>
@@ -166,7 +171,7 @@ export function DeviceDialog({ open, onOpenChange, device, onSave }: DeviceDialo
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right">Device Key</Label>
                             <div className="col-span-3 flex gap-2">
-                                <Input value={deviceKey} onChange={(e) => setDeviceKey(e.target.value)} required />
+                                <Input value={deviceKey} readOnly required />
                                 <Button type="button" variant="outline" size="sm" onClick={generateKey}>Gen</Button>
                             </div>
                         </div>

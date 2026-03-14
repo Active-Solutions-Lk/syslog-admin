@@ -3,20 +3,34 @@
 import { DataTable } from "@/components/dashboard/data_table";
 import { PortDialog } from "@/components/dashboard/port-dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { ArrowUpDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { getPorts, createPort, updatePort, deletePort } from "@/app/actions/ports";
-import { CellContext } from "@tanstack/react-table";
+import { CellContext, ColumnDef } from "@tanstack/react-table";
 
 interface Port {
   id?: string;
   port: number;
 }
 
-const columns = [
+// Define table columns with sorting capabilities
+const columns: ColumnDef<Port>[] = [
   {
     accessorKey: "port",
-    header: "Port Number",
-    cell: ({ row }: CellContext<Port, unknown>) => (
+    header: ({ column }) => {
+      return (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent p-0 flex items-center gap-2"
+        >
+          Port Number
+          <ArrowUpDown className="h-4 w-4" />
+        </Button>
+      )
+    },
+    cell: ({ row }: CellContext<Port, any>) => (
       <div className="flex items-center gap-3">
         <Avatar className="h-8 w-8">
           <AvatarFallback>{row.original.port?.toString().charAt(0) || 'P'}</AvatarFallback>
@@ -24,6 +38,12 @@ const columns = [
         <span>{row.original.port || 'N/A'}</span>
       </div>
     ),
+    // Use numerical sorting to fix the sorting bug (prevents 1, 10, 2 order)
+    sortingFn: (rowA, rowB) => {
+      const a = Number(rowA.original.port) || 0;
+      const b = Number(rowB.original.port) || 0;
+      return a - b;
+    },
   },
 ];
 

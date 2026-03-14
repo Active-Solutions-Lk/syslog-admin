@@ -100,6 +100,9 @@ export function ResellerManagement() {
         const result = await deleteReseller(reseller.id);
         if (result.success) {
           setResellers(resellers.filter(r => r.id !== reseller.id));
+        } else {
+          // Display error if reseller belongs to a project
+          alert(result.error);
         }
       } catch (error) {
         console.error('Error deleting reseller:', error);

@@ -1,7 +1,7 @@
 "use server";
 
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient({
   datasources: {
@@ -189,6 +189,20 @@ export async function updateAdmin({ id, username, email, role }) {
 
 export async function deleteAdmin(id) {
   try {
+    // Prevent deletion if the admin is assigned to any projects
+    const linkedProjects = await prisma.projects.count({
+      where: {
+        admin_id: parseInt(id)
+      }
+    });
+
+    if (linkedProjects > 0) {
+      return {
+        success: false,
+        error: "Cannot delete this admin because he/she is assigned to one or more projects. Please reassign the projects first."
+      };
+    }
+
     await prisma.admins.delete({
       where: {
         id: parseInt(id),

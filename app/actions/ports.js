@@ -48,6 +48,17 @@ export async function getPortById(id) {
 
 export async function createPort({ port }) {
   try {
+    // Check if the port already exists to prevent duplicates
+    const existingPort = await prisma.ports.findFirst({
+      where: {
+        port: parseInt(port),
+      },
+    });
+
+    if (existingPort) {
+      return { success: false, error: `Port ${port} already exists.` };
+    }
+
     const newPort = await prisma.ports.create({
       data: {
         port: parseInt(port),
@@ -62,6 +73,18 @@ export async function createPort({ port }) {
 
 export async function updatePort({ id, port }) {
   try {
+    // Check if another record already uses this port number
+    const existingPort = await prisma.ports.findFirst({
+      where: {
+        port: parseInt(port),
+        id: { not: parseInt(id) }, // Exclude the current record being updated
+      },
+    });
+
+    if (existingPort) {
+      return { success: false, error: `Port ${port} already exists.` };
+    }
+
     const updatedPort = await prisma.ports.update({
       where: { id: parseInt(id) },
       data: {

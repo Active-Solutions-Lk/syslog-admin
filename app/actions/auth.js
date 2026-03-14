@@ -1,6 +1,6 @@
 "use server";
 
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { SignJWT } from 'jose';
 import { cookies } from 'next/headers';
 import { PrismaClient } from '@prisma/client';
@@ -60,7 +60,7 @@ export async function Login({ userName, password }) {
     const cookieStore = await cookies();
     cookieStore.set('auth-token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       maxAge: 60 * 60 * 24,
       path: '/',
       sameSite: 'lax',
