@@ -22,7 +22,13 @@ import { getAnalyzers } from "@/app/actions/analyzers";
 import { getPorts } from "@/app/actions/ports";
 import { getDevicesByProjectId, createDevice, deleteDevice } from "@/app/actions/devices";
 import { format } from "date-fns";
-import { Copy, Trash } from "lucide-react";
+import { Copy, Trash, RefreshCw } from "lucide-react";
+
+// sort options alphabetically
+const sortOptions = (arr: { value: string; label: string }[]) =>
+  arr.sort((a, b) =>
+    a.label.localeCompare(b.label, undefined, { sensitivity: "base" })
+  );
 
 const generateActivationKey = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -34,10 +40,11 @@ interface ProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   project?: any;
+  allProjects?: any[]; // For checking existing collector/port combinations
   onSave: (data: any) => void;
 }
 
-export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDialogProps) {
+export function ProjectDialog({ open, onOpenChange, project, allProjects, onSave }: ProjectDialogProps) {
   const [activation_key, setActivationKey] = useState("");
   const [project_type_id, setProjectTypeId] = useState("");
   const [collector_id, setCollectorId] = useState("");
@@ -50,6 +57,8 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
   const [devices, setDevices] = useState<any[]>([]);
   const [localDevices, setLocalDevices] = useState<any[]>([]); // New state for creating devices
   const [newDeviceLoading, setNewDeviceLoading] = useState(false);
+  
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
 
   // ... existing options state ...
   const [options, setOptions] = useState<any>({
@@ -112,25 +121,43 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
           getProjectTypes(), getAdmins(), getResellers(), getEndCustomers(), getCollectors(), getAnalyzers(), getPorts()
         ]);
         setOptions({
-          types: (types.projectTypes || []).map((t: any) => ({ value: t.id, label: t.type })),
-          admins: (admins.admins || []).map((a: any) => ({ value: a.id, label: a.username })),
-          resellers: (resellers.resellers || []).map((r: any) => ({ value: r.id, label: r.company })),
-          customers: (customers.customers || []).map((c: any) => ({ value: c.id, label: c.company || c.contact_person })),
-          collectors: (collectors.collectors || []).map((c: any) => ({ value: c.id, label: c.name })),
-          analyzers: (analyzers.analyzers || []).map((a: any) => ({ value: a.id, label: a.name })),
-          ports: (ports.ports || []).map((p: any) => ({ value: p.id, label: `Port ${p.port}` }))
+          types: sortOptions((types.projectTypes || []).map((t: any) => ({ value: t.id, label: t.type }))),
+          admins: sortOptions((admins.admins || []).map((a: any) => ({ value: a.id, label: a.username }))),
+          // Show only active entities in the form dropdowns
+          resellers: sortOptions((resellers.resellers || [])
+            .filter((r: any) => r.status === true)
+            .map((r: any) => ({ value: r.id, label: r.company }))),
+          customers: sortOptions((customers.customers || [])
+            .filter((c: any) => c.status === true)
+            .map((c: any) => ({
+              value: c.id,
+              label: c.company || c.contact_person
+            }))),
+          collectors: sortOptions((collectors.collectors || [])
+            .filter((c: any) => c.is_active === true)
+            .map((c: any) => ({ value: c.id, label: c.name }))),
+          analyzers: sortOptions((analyzers.analyzers || [])
+            .filter((a: any) => a.status === true)
+            .map((a: any) => ({ value: a.id, label: a.name }))),
+          ports: (ports.ports || [])
+            .sort((a: any, b: any) => a.port - b.port)
+            .map((p: any) => ({
+              value: p.id,
+              label: `Port ${p.port}`
+            })),
         });
 
         if (project) {
           if (project.id) fetchDevices(project.id);
+          // set project data
           setActivationKey(project.activation_key);
-          setProjectTypeId(project.project_types?.id?.toString() || "");
-          setCollectorId(project.collectors?.id?.toString() || "");
-          setAnalyzerId(project.analyzers?.id?.toString() || "");
-          setPortId(project.ports?.id?.toString() || "");
-          setAdminId(project.admins?.id?.toString() || "");
-          setResellerId(project.reseller?.id?.toString() || "");
-          setEndCustomerId(project.end_customer?.id?.toString() || "");
+          setProjectTypeId(project.project_type_id?.toString() || "");
+          setCollectorId(project.collector_id?.toString() || "");
+          setAnalyzerId(project.analyzer_id?.toString() || "");
+          setPortId(project.port_id?.toString() || "");
+          setAdminId(project.admin_id?.toString() || "");
+          setResellerId(project.reseller_id?.toString() || "");
+          setEndCustomerId(project.end_customer_id?.toString() || "");
           setDeviceCount(project.device_count?.toString() || "5");
           setLocalDevices([]); // Reset local devices for edit mode
         } else {
@@ -143,6 +170,23 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
       fetchData();
     }
   }, [open, project]);
+
+  // Autofill the first available port when a collector is selected (only for new projects)
+  useEffect(() => {
+    // Only autofill if: it's a new project (!project), a collector is selected, ports are loaded, and port is currently empty
+    if (open && !project && collector_id && options.ports.length > 0 && !port_id) {
+      const usedPortIds = (allProjects || [])
+        .filter(p => p.collector_id === collector_id.toString())
+        .map(p => p.port_id?.toString());
+
+      // Find the first port ID from the list that is not in the used list for this collector
+      const availablePort = options.ports.find((p: any) => !usedPortIds.includes(p.value));
+
+      if (availablePort) {
+        setPortId(availablePort.value);
+      }
+    }
+  }, [collector_id, options.ports, allProjects, project, open, port_id]);
 
   // ... existing fetchDevices ...
   const fetchDevices = async (projectId: string) => {
@@ -211,9 +255,44 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
     });
   };
 
+  // copy to clipboard
+  const handleCopy = (text: string) => {
+    const fallbackCopy = () => {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    };
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(text)
+          .then(() => setCopySuccess("Copied to clipboard!"))
+          .catch(() => {
+            fallbackCopy();
+            setCopySuccess("Copied to clipboard!");
+          });
+      } else {
+        fallbackCopy();
+        setCopySuccess("Copied to clipboard!");
+      }
+    } catch (err) {
+      console.error("Copy failed", err);
+    }
+
+    // hide message after 2 seconds
+    setTimeout(() => setCopySuccess(null), 2000);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto">
+      {/* Added overflow-x-hidden to remove the horizontal scroll bar */}
+      <DialogContent className="sm:max-w-[1000px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <form onSubmit={handleSubmit}>
           {/* ... existing header ... */}
           {/* ... existing form fields ... */}
@@ -224,7 +303,9 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
             <div className="space-y-2">
               <Label>Activation Key</Label>
               <div className="flex gap-2">
-                <Input value={activation_key} onChange={(e) => setActivationKey(e.target.value)} required />
+                {/* Activation key should be read only */}
+                <Input value={activation_key} readOnly required />
+                {/* <Input value={activation_key} onChange={(e) => setActivationKey(e.target.value)} required /> */}
                 {!project && <Button type="button" variant="outline" onClick={() => setActivationKey(generateActivationKey())}>Gen</Button>}
               </div>
             </div>
@@ -236,13 +317,32 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
               <Label>Collector</Label>
               <ComboBox options={options.collectors} value={collector_id} onValueChange={setCollectorId} placeholder="Select collector" />
             </div>
-            <div className="space-y-2">
-              <Label>Analyzer</Label>
-              <ComboBox options={options.analyzers} value={analyzer_id} onValueChange={setAnalyzerId} placeholder="Select analyzer" />
-            </div>
+            {/* Analyzer selection grid is only needed for edit project form */}
+            {project && (
+              <div className="space-y-2">
+                <Label>Analyzer</Label>
+                <ComboBox options={options.analyzers} value={analyzer_id} onValueChange={setAnalyzerId} placeholder="Select analyzer" />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Port</Label>
-              <ComboBox options={options.ports} value={port_id} onValueChange={setPortId} placeholder="Select port" />
+              {/* Autofill and filter ports based on selected collector to prevent duplicates */}
+              <ComboBox
+                options={options.ports.filter((p: any) => {
+                  // In add mode, hide ports already taken by this collector
+                  // In edit mode, allow the current project's port plus any untaken ones
+                  const isCurrentPort = project?.port_id?.toString() === p.value;
+                  const isTaken = (allProjects || []).some(ap =>
+                    ap.collector_id === collector_id &&
+                    ap.port_id === p.value &&
+                    ap.id !== project?.id
+                  );
+                  return isCurrentPort || !isTaken;
+                })}
+                value={port_id}
+                onValueChange={setPortId}
+                placeholder="Select port"
+              />
             </div>
             <div className="space-y-2">
               <Label>Admin</Label>
@@ -285,18 +385,28 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
                     <th className="p-2 w-24">Duration</th>
                     <th className="p-2 w-40">Starts</th>
                     <th className="p-2 w-40">Ends</th>
-                    <th className="p-2 text-right w-20">Actions</th>
+                    {/* Render Actions column only in Edit mode */}
+                    {project?.id && <th className="p-2 text-right w-20">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {/* Render existing devices for Edit mode */}
                   {project?.id && devices.map((device) => (
                     <tr key={device.id} className="border-t">
-                      <td className="p-2 font-mono flex items-center gap-2">
+                      <td className="p-2 font-mono flex items-center gap-2 relative">
                         {device.device_key}
-                        <Button type="button" variant="ghost" size="icon" className="h-4 w-4" onClick={() => navigator.clipboard.writeText(device.device_key)}>
-                          <Copy className="h-3 w-3" />
-                        </Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-4 w-4"
+                        onClick={() => handleCopy(device.device_key)}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+
+                        {/* Success message */}
+                        {copySuccess && (
+                          <div className="fixed bottom-4 right-4 bg-green-500 text-white px-3 py-2 rounded shadow">
+                            {copySuccess}
+                          </div>
+                        )}
                       </td>
                       <td className="p-2">{device.log_duration}</td>
                       <td className="p-2">{format(new Date(device.package_start_at), "yyyy-MM-dd")}</td>
@@ -320,7 +430,7 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
                             className="h-8 font-mono text-xs"
                           />
                           <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={() => updateLocalDevice(index, 'device_key', generateHexKey())}>
-                            <Copy className="h-3 w-3 rotate-90" />
+                            <RefreshCw className="h-3 w-3 rotate-90" />
                           </Button>
                         </div>
                       </td>
@@ -348,9 +458,7 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
                           className="h-8"
                         />
                       </td>
-                      <td className="p-2 text-right">
-                        {/* Actions for local devices if needed, maybe simple X to clear? */}
-                      </td>
+                      {/* Removed empty Actions <td> for Add mode */}
                     </tr>
                   ))}
 
@@ -359,7 +467,7 @@ export function ProjectDialog({ open, onOpenChange, project, onSave }: ProjectDi
                     <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">No device keys generated</td></tr>
                   )}
                   {!project?.id && localDevices.length === 0 && (
-                    <tr><td colSpan={5} className="p-4 text-center text-muted-foreground">Set device count to generate keys</td></tr>
+                    <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">Set device count to generate keys</td></tr>
                   )}
                 </tbody>
               </table>

@@ -15,6 +15,7 @@ import { useState, useEffect } from "react";
 interface ProjectType {
     id?: string;
     type: string;
+    description: string;
 }
 
 interface ProjectTypeDialogProps {
@@ -25,20 +26,26 @@ interface ProjectTypeDialogProps {
 }
 
 export function ProjectTypeDialog({ open, onOpenChange, projectType, onSave }: ProjectTypeDialogProps) {
+
     const [typeName, setTypeName] = useState("");
+    const [description, setDescription] = useState("");
 
     useEffect(() => {
         if (open) {
             setTypeName(projectType?.type || "");
+            setDescription(projectType?.description || "");
         }
     }, [open, projectType]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (!typeName.trim()) return;
+
         onSave({
-            ...(projectType?.id && { id: projectType.id }),
-            type: typeName.trim()
+            id: projectType?.id,
+            type: typeName.trim(),
+            description: description.trim(),
         });
     };
 
@@ -47,9 +54,13 @@ export function ProjectTypeDialog({ open, onOpenChange, projectType, onSave }: P
             <DialogContent className="sm:max-w-[425px]">
                 <form onSubmit={handleSubmit}>
                     <DialogHeader>
-                        <DialogTitle>{projectType ? "Edit Project Type" : "Add Project Type"}</DialogTitle>
+                        <DialogTitle>
+                            {projectType ? "Edit Project Type" : "Add Project Type"}
+                        </DialogTitle>
                     </DialogHeader>
+
                     <div className="grid gap-4 py-4">
+
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label className="text-right">Type Name</Label>
                             <Input
@@ -59,10 +70,25 @@ export function ProjectTypeDialog({ open, onOpenChange, projectType, onSave }: P
                                 required
                             />
                         </div>
+
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right">Description</Label>
+                            <Input
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                className="col-span-3"
+                            />
+                        </div>
+
                     </div>
+
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                        <Button type="submit">{projectType ? "Save" : "Add"}</Button>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit">
+                            {projectType ? "Save" : "Add"}
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>

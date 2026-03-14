@@ -81,7 +81,12 @@ export function CollectorManagement() {
     if (!c.id) return;
     if (window.confirm(`Delete collector ${c.name}?`)) {
       const result = await deleteCollector(c.id);
-      if (result.success) setCollectors(collectors.filter(p => p.id !== c.id));
+      if (result.success) {
+        setCollectors(collectors.filter(p => p.id !== c.id));
+      } else {
+        // Show error if collector is linked to a project
+        alert(result.error);
+      }
     }
   };
 

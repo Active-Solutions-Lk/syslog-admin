@@ -21,7 +21,7 @@ interface Project {
   admins: { username: string };
   reseller?: { company: string } | null;
   end_customer?: { company: string | null; contact_person: string } | null;
-  ports?: { port: number } | null;
+  port?: { port: number } | null;
   analyzers?: { name: string } | null;
 }
 
@@ -98,7 +98,7 @@ export function ProjectManagement() {
     },
     {
       header: "Port",
-      cell: ({ row }: CellContext<Project, unknown>) => row.original.ports?.port || 'N/A',
+      cell: ({ row }: CellContext<Project, unknown>) => row.original.port?.port || 'N/A',
     },
     {
       header: "Customer",
@@ -174,6 +174,7 @@ export function ProjectManagement() {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         project={editingProject || undefined}
+        allProjects={projects}
         onSave={handleSaveProject}
       />
     </>

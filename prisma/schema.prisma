@@ -47,6 +47,7 @@ model projects {
   collectors      collectors    @relation(fields: [collector_id], references: [id], onUpdate: Restrict, map: "projects_ibfk_6")
   analyzers       analyzers?    @relation(fields: [analyzer_id], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "projects_ibfk_7")
 
+  @@unique([collector_id, port_id])
   @@index([end_customer_id], map: "end_customer_id")
   @@index([port_id], map: "port_id")
   @@index([admin_id], map: "admin_id")

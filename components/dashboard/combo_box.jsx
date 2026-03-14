@@ -19,14 +19,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 
-export function ComboBox({ 
-  options, 
-  value, 
-  onValueChange, 
+export function ComboBox({
+  options,
+  value,
+  onValueChange,
   placeholder = "Select an option...",
   searchPlaceholder = "Search...",
   emptyMessage = "No option found.",
-  disabled = false
+  disabled = false,
+  sr_only = false
 }) {
   const [open, setOpen] = React.useState(false)
 
@@ -37,8 +38,8 @@ export function ComboBox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
-          disabled={disabled}
+          className={cn("w-full justify-between", sr_only && "sr-only")}
+          disabled={disabled || sr_only}
         >
           {value
             ? options.find((option) => option.value === value)?.label
@@ -55,9 +56,10 @@ export function ComboBox({
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.value}
-                  onSelect={(currentValue) => {
-                    onValueChange(currentValue === value ? "" : currentValue)
+                  // Make value as option.label and onSelect as option.value
+                  value={option.label}
+                  onSelect={() => {
+                    onValueChange(option.value)
                     setOpen(false)
                   }}
                 >

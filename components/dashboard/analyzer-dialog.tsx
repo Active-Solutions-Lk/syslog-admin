@@ -49,6 +49,14 @@ export function AnalyzerDialog({ open, onOpenChange, analyzer, onSave }: Analyze
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Client-side validation for IP address format
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (ip && !ipRegex.test(ip)) {
+      alert("Invalid IP address format. Use format x.x.x.x");
+      return;
+    }
+
     onSave({
       ...(analyzer?.id && { id: analyzer.id }),
       name,
