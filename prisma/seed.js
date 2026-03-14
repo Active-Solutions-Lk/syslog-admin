@@ -8,7 +8,7 @@ async function main() {
 
   // 1. Project Types
   const projectTypes = [];
-  const typeNames = ['Cloud', 'On-Premise', 'Hybrid'];
+  const typeNames = ['Cloud', 'On-Premise'];
   for (const name of typeNames) {
     const type = await prisma.project_types.upsert({
       where: { id: typeNames.indexOf(name) + 1 },
